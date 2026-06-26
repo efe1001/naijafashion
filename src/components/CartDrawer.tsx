@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { X, Plus, Minus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
@@ -9,9 +10,14 @@ import { formatPrice } from "@/lib/utils";
 export default function CartDrawer() {
   const { items, isCartOpen, closeCart, removeItem, updateQuantity, getTotalPrice } =
     useCartStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   const total = getTotalPrice();
   const delivery = total >= 50000 ? 0 : 3500;
+
+  if (!mounted) return null;
 
   return (
     <>

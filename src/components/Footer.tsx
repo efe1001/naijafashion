@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Instagram, Twitter, Facebook, Youtube, Mail, Phone, MapPin } from "lucide-react";
+import { Globe, Share2, MessageSquare, Play, Mail, Phone, MapPin } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -46,7 +46,7 @@ export default function Footer() {
               touch — from Ankara to designer wear.
             </p>
             <div className="flex gap-3 mt-5">
-              {[Instagram, Twitter, Facebook, Youtube].map((Icon, i) => (
+              {[Globe, Share2, MessageSquare, Play].map((Icon, i) => (
                 <a
                   key={i}
                   href="#"
@@ -109,19 +109,19 @@ export default function Footer() {
             <h4 className="text-white font-semibold mb-4">Contact Us</h4>
             <ul className="space-y-3 text-sm">
               <li className="flex gap-3">
-                <MapPin size={16} className="text-green-500 mt-0.5 flex-shrink-0" />
+                <MapPin size={16} className="text-green-500 mt-0.5 shrink-0" />
                 <span className="text-gray-400">
                   15 Bode Thomas Street, Surulere, Lagos, Nigeria
                 </span>
               </li>
               <li className="flex gap-3 items-center">
-                <Phone size={16} className="text-green-500 flex-shrink-0" />
+                <Phone size={16} className="text-green-500 shrink-0" />
                 <a href="tel:+2348012345678" className="hover:text-green-400 transition-colors">
                   +234 801 234 5678
                 </a>
               </li>
               <li className="flex gap-3 items-center">
-                <Mail size={16} className="text-green-500 flex-shrink-0" />
+                <Mail size={16} className="text-green-500 shrink-0" />
                 <a
                   href="mailto:hello@naijafashion.ng"
                   className="hover:text-green-400 transition-colors"
@@ -150,8 +150,8 @@ export default function Footer() {
             <div className="flex items-center gap-3">
               <span className="text-xs text-gray-500">Secured payments via</span>
               <div className="flex gap-2 items-center">
-                <div className="bg-gray-700 text-xs text-white px-2.5 py-1 rounded font-bold">
-                  Paystack
+                <div className="bg-[#0055d4] text-xs text-white px-2.5 py-1 rounded font-bold">
+                  Monnify
                 </div>
                 <div className="bg-gray-700 text-xs text-white px-2.5 py-1 rounded font-bold">
                   Visa

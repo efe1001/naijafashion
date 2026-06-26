@@ -4,13 +4,18 @@ import { ArrowRight, TruckIcon, ShieldCheck, RefreshCw, Headphones } from "lucid
 import ProductCard from "@/components/ProductCard";
 import { products, categories } from "@/data/products";
 
-const featuredProducts = products.slice(0, 8);
+const menProducts = products.filter((p) => p.category === "men" || p.category === "nigerian-traditional");
+const otherProducts = products.filter((p) => p.category !== "men" && p.category !== "nigerian-traditional");
+const featuredProducts = [...menProducts, ...otherProducts].slice(0, 8);
 const newArrivals = products.filter((p) => p.badge === "New").slice(0, 4);
-const nigerianPicks = products.filter((p) => p.origin === "nigerian").slice(0, 4);
+const nigerianPicks = [
+  ...products.filter((p) => p.category === "men"),
+  ...products.filter((p) => p.category === "nigerian-traditional" && ["agbada","senator","babban-riga"].includes(p.subcategory)),
+].slice(0, 12);
 
 const features = [
   { icon: TruckIcon, title: "Free Delivery", desc: "On orders above ₦50,000" },
-  { icon: ShieldCheck, title: "Secure Payment", desc: "100% secured via Paystack" },
+  { icon: ShieldCheck, title: "Secure Payment", desc: "100% secured via Monnify" },
   { icon: RefreshCw, title: "Easy Returns", desc: "7-day hassle-free returns" },
   { icon: Headphones, title: "24/7 Support", desc: "Dedicated customer care" },
 ];
@@ -72,10 +77,10 @@ export default function HomePage() {
 
             <div className="hidden lg:grid grid-cols-2 gap-4">
               {[
-                "https://images.unsplash.com/photo-1590330297626-d7aff25a0431?w=400&q=80",
-                "https://images.unsplash.com/photo-1618932260643-eee4a2f652a6?w=400&q=80",
                 "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400&q=80",
-                "https://images.unsplash.com/photo-1572804013427-4d7ca7268217?w=400&q=80",
+                "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=400&q=80",
+                "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=400&q=80",
+                "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400&q=80",
               ].map((src, i) => (
                 <div
                   key={i}
@@ -142,14 +147,14 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between mb-8">
             <div>
-              <p className="text-green-700 font-semibold text-sm uppercase tracking-wider mb-1">🇳🇬 Made for Nigeria</p>
-              <h2 className="text-3xl font-extrabold text-gray-900">Nigerian Bestsellers</h2>
+              <p className="text-green-700 font-semibold text-sm uppercase tracking-wider mb-1">🇳🇬 Men's Nigerian Wear</p>
+              <h2 className="text-3xl font-extrabold text-gray-900">Top Picks for Men</h2>
             </div>
-            <Link href="/category/nigerian-traditional" className="hidden sm:flex items-center gap-1 text-green-700 font-semibold text-sm">
+            <Link href="/category/men" className="hidden sm:flex items-center gap-1 text-green-700 font-semibold text-sm">
               See All <ArrowRight size={16} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-5">
             {nigerianPicks.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
@@ -166,10 +171,10 @@ export default function HomePage() {
                 Limited Time Offer
               </span>
               <h2 className="text-4xl font-extrabold text-white mt-4 leading-tight">
-                Up to 40% off on Ankara &amp; Lace
+                Up to 40% off on Men&apos;s Agbada &amp; Senator
               </h2>
               <p className="text-green-100 mt-3 text-lg">
-                Grab exclusive deals on our most-loved Nigerian wear. Sale ends soon!
+                Dress sharp for less — exclusive deals on Nigerian men&apos;s traditional &amp; casual wear. Sale ends soon!
               </p>
               <Link
                 href="/products?filter=sale"

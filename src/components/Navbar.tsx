@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ShoppingBag, Search, Menu, X, Heart, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ShoppingBag, Search, Menu, X, Heart, ChevronDown, User, LogOut, ShieldCheck } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
+import { useAuthStore } from "@/store/authStore";
 
 const navLinks = [
   {
@@ -45,13 +47,24 @@ const navLinks = [
 
 export default function Navbar() {
   const { getTotalItems, toggleCart } = useCartStore();
+  const { currentUser, isAuthenticated, logout } = useAuthStore();
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const totalItems = getTotalItems();
 
+  const handleLogout = () => {
+    logout();
+    setUserMenuOpen(false);
+    router.push("/");
+  };
+
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -61,7 +74,7 @@ export default function Navbar() {
     <>
       {/* Top announcement bar */}
       <div className="bg-green-800 text-white text-center text-xs py-2 px-4 font-medium tracking-wide">
-        🇳🇬 Free delivery on orders above ₦50,000 &nbsp;|&nbsp; Pay with Paystack — Safe & Secure 🔒
+        🇳🇬 Free delivery on orders above ₦50,000 &nbsp;|&nbsp; Pay with Monnify — Safe & Secure 🔒
       </div>
 
       <header
@@ -138,12 +151,55 @@ export default function Navbar() {
                 aria-label="Cart"
               >
                 <ShoppingBag size={20} />
-                {totalItems > 0 && (
+                {mounted && totalItems > 0 && (
                   <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                     {totalItems > 9 ? "9+" : totalItems}
                   </span>
                 )}
               </button>
+
+              {/* User menu */}
+              {mounted && (
+                isAuthenticated && currentUser ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      className="flex items-center gap-1.5 p-1.5 rounded-full hover:bg-green-50 transition-colors"
+                    >
+                      <div className="w-8 h-8 bg-green-700 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                        {currentUser.name.split(" ").map(n => n[0]).join("").slice(0,2)}
+                      </div>
+                      <ChevronDown size={12} className="text-gray-500 hidden sm:block" />
+                    </button>
+                    {userMenuOpen && (
+                      <div className="absolute top-full right-0 mt-2 w-52 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-50">
+                        <div className="px-4 py-2 border-b border-gray-50 mb-1">
+                          <p className="font-bold text-gray-900 text-sm truncate">{currentUser.name}</p>
+                          <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
+                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold mt-1 inline-block ${currentUser.role === "admin" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                            {currentUser.role}
+                          </span>
+                        </div>
+                        {currentUser.role === "admin" && (
+                          <Link href="/admin" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-green-700 hover:bg-green-50 font-semibold">
+                            <ShieldCheck size={14} /> Admin Dashboard
+                          </Link>
+                        )}
+                        <Link href="/profile" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                          <User size={14} /> My Profile
+                        </Link>
+                        <button onClick={handleLogout} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50">
+                          <LogOut size={14} /> Sign Out
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link href="/login" className="hidden sm:flex items-center gap-1.5 bg-green-700 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-green-800 transition-colors">
+                    <User size={14} /> Login
+                  </Link>
+                )
+              )}
               <button
                 onClick={() => setMobileOpen(!mobileOpen)}
                 className="lg:hidden p-2 text-gray-600 hover:text-green-700 rounded-full transition-colors"
