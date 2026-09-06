@@ -4,10 +4,12 @@ import { use } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
-import { products, categories } from "@/data/products";
+import { categories } from "@/data/products";
+import { useProducts } from "@/lib/useProducts";
 
 export default function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
+  const { products } = useProducts();
   const category = categories.find((c) => c.slug === slug);
   const categoryProducts = products.filter((p) => p.category === slug);
 

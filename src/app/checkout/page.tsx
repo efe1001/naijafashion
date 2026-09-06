@@ -124,8 +124,38 @@ export default function CheckoutPage() {
       },
       onLoadStart: () => { setProcessing(true); },
       onLoadComplete: () => {},
-      onComplete: (response: Record<string, unknown>) => {
+      onComplete: async (response: Record<string, unknown>) => {
         if (response.paymentStatus === "PAID" || response.status === "SUCCESS") {
+          try {
+            await fetch("/api/orders", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                id: orderId,
+                customerName: `${form.firstName} ${form.lastName}`,
+                customerEmail: form.email,
+                phone: form.phone,
+                address: form.address,
+                state: form.state,
+                items: items.map((item) => ({
+                  productId: item.id,
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                  size: item.selectedSize,
+                  color: item.selectedColor,
+                  image: item.images[0],
+                })),
+                subtotal: total,
+                delivery,
+                total: grandTotal,
+                paymentMethod: payMethod,
+                paymentRef: (response.transactionReference as string) || (response.paymentReference as string) || null,
+              }),
+            });
+          } catch {
+            // Payment already succeeded on Monnify's side; order-record failure shouldn't block the customer.
+          }
           clearCart();
           router.push(`/order-confirmation?orderId=${orderId}&total=${grandTotal}&name=${form.firstName}`);
         } else {

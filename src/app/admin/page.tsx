@@ -1,24 +1,23 @@
 "use client";
 
-import { sampleOrders } from "@/data/orders";
-import { products } from "@/data/products";
-import { ACCOUNTS } from "@/store/authStore";
-import { formatPrice } from "@/lib/utils";
-import { statusColors } from "@/data/orders";
+import { useOrders } from "@/lib/useOrders";
+import { useProducts } from "@/lib/useProducts";
+import { useUsers } from "@/lib/useUsers";
+import { formatPrice, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import {
   TrendingUp, ShoppingBag, Users, Package, ArrowUpRight, Clock,
   AlertTriangle, CheckCircle2, Truck, XCircle, RefreshCw,
 } from "lucide-react";
 
-const totalRevenue = sampleOrders.filter(o => o.status !== "cancelled" && o.status !== "refunded").reduce((s, o) => s + o.total, 0);
-const totalOrders = sampleOrders.length;
-const totalUsers = ACCOUNTS.filter(a => a.role === "user").length;
-const totalProducts = products.length;
-const pendingOrders = sampleOrders.filter(o => o.status === "pending").length;
-const lowStockProducts = products.filter(p => !p.inStock).length;
-
-const recentOrders = [...sampleOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
+const statusColors: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  processing: "bg-blue-100 text-blue-800",
+  shipped: "bg-purple-100 text-purple-800",
+  delivered: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+  refunded: "bg-gray-100 text-gray-800",
+};
 
 const statusIcon: Record<string, React.ReactNode> = {
   pending: <Clock size={14} className="text-yellow-500" />,
@@ -28,19 +27,32 @@ const statusIcon: Record<string, React.ReactNode> = {
   cancelled: <XCircle size={14} className="text-red-500" />,
 };
 
-const monthlyRevenue = [
-  { month: "Jan", value: 280000 },
-  { month: "Feb", value: 420000 },
-  { month: "Mar", value: 310000 },
-  { month: "Apr", value: 550000 },
-  { month: "May", value: 480000 },
-  { month: "Jun", value: totalRevenue },
-];
-const maxRevenue = Math.max(...monthlyRevenue.map(m => m.value));
-
-const topProducts = [...products].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 5);
-
 export default function AdminDashboard() {
+  const { orders: sampleOrders } = useOrders();
+  const { products } = useProducts();
+  const { users } = useUsers();
+
+  const totalRevenue = sampleOrders.filter(o => o.status !== "cancelled" && o.status !== "refunded").reduce((s, o) => s + o.total, 0);
+  const totalOrders = sampleOrders.length;
+  const totalUsers = users.filter(u => u.role === "user").length;
+  const totalProducts = products.length;
+  const pendingOrders = sampleOrders.filter(o => o.status === "pending").length;
+  const lowStockProducts = products.filter(p => !p.inStock).length;
+
+  const recentOrders = [...sampleOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
+
+  const monthlyRevenue = [
+    { month: "Jan", value: 280000 },
+    { month: "Feb", value: 420000 },
+    { month: "Mar", value: 310000 },
+    { month: "Apr", value: 550000 },
+    { month: "May", value: 480000 },
+    { month: "Jun", value: totalRevenue },
+  ];
+  const maxRevenue = Math.max(...monthlyRevenue.map(m => m.value));
+
+  const topProducts = [...products].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 5);
+
   const stats = [
     { label: "Total Revenue", value: formatPrice(totalRevenue), icon: TrendingUp, color: "bg-green-500", change: "+18.2%", up: true },
     { label: "Total Orders", value: totalOrders, icon: ShoppingBag, color: "bg-blue-500", change: "+12.5%", up: true },
@@ -179,7 +191,7 @@ export default function AdminDashboard() {
                   {order.status}
                 </span>
                 <p className="font-bold text-gray-900 text-sm">{formatPrice(order.total)}</p>
-                <p className="text-xs text-gray-400 hidden sm:block">{order.createdAt}</p>
+                <p className="text-xs text-gray-400 hidden sm:block">{formatDate(order.createdAt)}</p>
                 <Link href="/admin/orders" className="text-green-600 hover:text-green-800">
                   <ArrowUpRight size={16} />
                 </Link>

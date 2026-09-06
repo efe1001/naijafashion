@@ -1,0 +1,4 @@
+[dev]
+  command = "next dev -p 3010"
+  targetPort = 3010
+  port = 8888

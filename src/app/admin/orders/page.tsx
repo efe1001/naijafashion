@@ -3,16 +3,28 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Search, Eye, ChevronDown, X, Truck, CheckCircle2, Clock, RefreshCw, XCircle, Package } from "lucide-react";
-import { sampleOrders, statusColors, Order, OrderStatus } from "@/data/orders";
-import { formatPrice } from "@/lib/utils";
+import { useOrders } from "@/lib/useOrders";
+import { ApiOrder } from "@/lib/order";
+import { formatPrice, formatDate } from "@/lib/utils";
+
+type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
+
+const statusColors: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  processing: "bg-blue-100 text-blue-800",
+  shipped: "bg-purple-100 text-purple-800",
+  delivered: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+  refunded: "bg-gray-100 text-gray-800",
+};
 
 const ALL_STATUSES: OrderStatus[] = ["pending", "processing", "shipped", "delivered", "cancelled", "refunded"];
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>(sampleOrders);
+  const { orders, refetch } = useOrders();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<ApiOrder | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -26,18 +38,17 @@ export default function AdminOrdersPage() {
     });
   }, [orders, search, statusFilter]);
 
-  const updateStatus = (orderId: string, status: OrderStatus) => {
-    setOrders(prev =>
-      prev.map(o =>
-        o.id === orderId
-          ? { ...o, status, updatedAt: new Date().toISOString().split("T")[0] }
-          : o
-      )
-    );
-    if (selectedOrder?.id === orderId) {
-      setSelectedOrder(prev => prev ? { ...prev, status, updatedAt: new Date().toISOString().split("T")[0] } : null);
-    }
+  const updateStatus = async (orderId: string, status: OrderStatus) => {
     setUpdatingStatus(null);
+    await fetch(`/api/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    await refetch();
+    if (selectedOrder?.id === orderId) {
+      setSelectedOrder(prev => prev ? { ...prev, status } : null);
+    }
   };
 
   const statusIcon: Record<string, React.ReactNode> = {
@@ -152,7 +163,7 @@ export default function AdminOrdersPage() {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 hidden sm:table-cell text-xs text-gray-400">{order.createdAt}</td>
+                  <td className="px-4 py-3.5 hidden sm:table-cell text-xs text-gray-400">{formatDate(order.createdAt)}</td>
                   <td className="px-5 py-3.5 text-right">
                     <button
                       onClick={() => setSelectedOrder(order)}
@@ -185,7 +196,7 @@ export default function AdminOrdersPage() {
                 <span className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-semibold ${statusColors[selectedOrder.status]}`}>
                   {statusIcon[selectedOrder.status]} <span className="capitalize">{selectedOrder.status}</span>
                 </span>
-                <span className="text-sm text-gray-400">Updated: {selectedOrder.updatedAt}</span>
+                <span className="text-sm text-gray-400">Updated: {formatDate(selectedOrder.updatedAt)}</span>
               </div>
 
               {/* Customer */}

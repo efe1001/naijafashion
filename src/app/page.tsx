@@ -12,15 +12,9 @@ import HeroSlider from "@/components/home/HeroSlider";
 import FlashSaleTimer from "@/components/home/FlashSaleTimer";
 import ProductTabs from "@/components/home/ProductTabs";
 import MarqueeStrip from "@/components/home/MarqueeStrip";
-import { products, categories } from "@/data/products";
-
-const nigerianPicks = [
-  ...products.filter(p => p.category === "men"),
-  ...products.filter(p => p.category === "nigerian-traditional" && ["agbada","senator","babban-riga"].includes(p.subcategory)),
-].slice(0, 12);
-
-const newArrivals = products.filter(p => p.badge === "New").slice(0, 4);
-const bestSellers = [...products].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 4);
+import { categories } from "@/data/products";
+import { useProducts } from "@/lib/useProducts";
+import { useMemo } from "react";
 
 const features = [
   { icon: TruckIcon, title: "Free Delivery", desc: "On orders above ₦50,000", color: "text-blue-500", bg: "bg-blue-50 group-hover:bg-blue-500" },
@@ -49,6 +43,16 @@ const fadeUp = { hidden: { opacity: 0, y: 40 }, show: { opacity: 1, y: 0 } };
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 
 export default function HomePage() {
+  const { products } = useProducts();
+
+  const nigerianPicks = useMemo(() => [
+    ...products.filter(p => p.category === "men"),
+    ...products.filter(p => p.category === "nigerian-traditional" && ["agbada","senator","babban-riga"].includes(p.subcategory)),
+  ].slice(0, 12), [products]);
+
+  const newArrivals = useMemo(() => products.filter(p => p.badge === "New").slice(0, 4), [products]);
+  const bestSellers = useMemo(() => [...products].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 4), [products]);
+
   return (
     <div className="bg-white overflow-x-hidden">
 

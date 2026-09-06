@@ -6,23 +6,29 @@ import Link from "next/link";
 import Image from "next/image";
 import { User, Package, LogOut, Edit2, Save, X } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import { sampleOrders } from "@/data/orders";
-import { statusColors } from "@/data/orders";
-import { formatPrice } from "@/lib/utils";
+import { useOrders } from "@/lib/useOrders";
+import { formatPrice, formatDate } from "@/lib/utils";
 import { nigerianStates } from "@/data/products";
 
+const statusColors: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-800",
+  processing: "bg-blue-100 text-blue-800",
+  shipped: "bg-purple-100 text-purple-800",
+  delivered: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+  refunded: "bg-gray-100 text-gray-800",
+};
+
 export default function ProfilePage() {
-  const { currentUser, isAuthenticated, logout, updateProfile } = useAuthStore();
+  const { currentUser, isAuthenticated, hydrated, logout, updateProfile } = useAuthStore();
+  const { orders: userOrders } = useOrders();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", address: "", state: "" });
 
-  useEffect(() => { setMounted(true); }, []);
-
   useEffect(() => {
-    if (mounted && !isAuthenticated) router.replace("/login");
-  }, [mounted, isAuthenticated, router]);
+    if (hydrated && !isAuthenticated) router.replace("/login");
+  }, [hydrated, isAuthenticated, router]);
 
   useEffect(() => {
     if (currentUser) {
@@ -30,15 +36,14 @@ export default function ProfilePage() {
     }
   }, [currentUser]);
 
-  const userOrders = currentUser ? sampleOrders.filter(o => o.userId === currentUser.id) : [];
   const totalSpent = userOrders.filter(o => !["cancelled","refunded"].includes(o.status)).reduce((s,o) => s+o.total, 0);
 
-  const handleSave = () => {
-    updateProfile(form);
+  const handleSave = async () => {
+    await updateProfile(form);
     setEditing(false);
   };
 
-  if (!mounted || !currentUser) return (
+  if (!hydrated || !currentUser) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="w-10 h-10 border-4 border-green-200 border-t-green-700 rounded-full animate-spin" />
     </div>
@@ -73,7 +78,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Member Since</span>
-                  <span className="font-bold text-gray-900">{currentUser.createdAt}</span>
+                  <span className="font-bold text-gray-900">{formatDate(currentUser.createdAt)}</span>
                 </div>
               </div>
 
@@ -167,7 +172,7 @@ export default function ProfilePage() {
                       { label: "Phone", value: currentUser.phone || "Not set" },
                       { label: "State", value: currentUser.state || "Not set" },
                       { label: "Address", value: currentUser.address || "Not set" },
-                      { label: "Last Login", value: currentUser.lastLogin || "—" },
+                      { label: "Last Login", value: currentUser.lastLogin ? formatDate(currentUser.lastLogin) : "—" },
                     ].map(({ label, value }) => (
                       <div key={label} className={label === "Address" ? "sm:col-span-2" : ""}>
                         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
@@ -198,7 +203,7 @@ export default function ProfilePage() {
                       <div className="flex items-center justify-between mb-3">
                         <div>
                           <p className="font-mono text-xs font-bold text-gray-700">{order.id}</p>
-                          <p className="text-xs text-gray-400">{order.createdAt}</p>
+                          <p className="text-xs text-gray-400">{formatDate(order.createdAt)}</p>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className={`text-xs px-2.5 py-1 rounded-full font-semibold capitalize ${statusColors[order.status]}`}>{order.status}</span>

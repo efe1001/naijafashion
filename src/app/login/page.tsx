@@ -32,8 +32,7 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    await new Promise((r) => setTimeout(r, 800));
-    const result = login(email, password);
+    const result = await login(email, password);
     setLoading(false);
 
     if (!result.success) {
@@ -131,6 +130,13 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <p className="text-center text-sm text-gray-500 mt-5">
+            New here?{" "}
+            <Link href="/signup" className="text-green-700 font-semibold hover:underline">
+              Create an account
+            </Link>
+          </p>
 
           {/* Demo accounts */}
           <div className="mt-6 pt-5 border-t border-gray-100">

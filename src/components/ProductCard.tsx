@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Heart, ShoppingBag, Star } from "lucide-react";
 import { Product } from "@/types";
 import { useCartStore } from "@/store/cartStore";
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function ProductCard({ product }: Props) {
+  const router = useRouter();
   const { addItem } = useCartStore();
   const { toggleWishlist, isWishlisted } = useWishlistStore();
   const wishlisted = isWishlisted(product.id);
@@ -74,9 +76,10 @@ export default function ProductCard({ product }: Props) {
 
         {/* Wishlist */}
         <button
-          onClick={(e) => {
+          onClick={async (e) => {
             e.preventDefault();
-            toggleWishlist(product);
+            const result = await toggleWishlist(product);
+            if (result.requiresAuth) router.push("/login");
           }}
           className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-white"
         >

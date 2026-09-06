@@ -6,10 +6,11 @@ import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag } from "lucide-react"
 import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
 import ProductCard from "@/components/ProductCard";
-import { products } from "@/data/products";
+import { useProducts } from "@/lib/useProducts";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, getTotalPrice, clearCart } = useCartStore();
+  const { products } = useProducts();
   const total = getTotalPrice();
   const delivery = total >= 50000 ? 0 : 3500;
   const grandTotal = total + delivery;

@@ -2,20 +2,19 @@
 
 import { useState } from "react";
 import { Search, Plus, Edit2, Trash2, ShieldCheck, User, X, Eye, EyeOff, Ban, CheckCircle } from "lucide-react";
-import { ACCOUNTS, AuthUser } from "@/store/authStore";
-import { formatPrice } from "@/lib/utils";
-import { sampleOrders } from "@/data/orders";
-
-type EditableUser = AuthUser & { password: string };
+import { useUsers, AdminUser } from "@/lib/useUsers";
+import { formatPrice, formatDate } from "@/lib/utils";
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<EditableUser[]>(ACCOUNTS.map(a => ({ ...a })));
+  const { users, refetch } = useUsers();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [editUser, setEditUser] = useState<EditableUser | null>(null);
+  const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [viewUser, setViewUser] = useState<EditableUser | null>(null);
+  const [viewUser, setViewUser] = useState<AdminUser | null>(null);
   const [showPass, setShowPass] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const [form, setForm] = useState({
     name: "", email: "", password: "", phone: "", address: "",
@@ -29,44 +28,60 @@ export default function AdminUsersPage() {
 
   const openAdd = () => {
     setEditUser(null);
+    setFormError("");
     setForm({ name: "", email: "", password: "", phone: "", address: "", state: "", role: "user", status: "active" });
     setShowModal(true);
   };
 
-  const openEdit = (u: EditableUser) => {
+  const openEdit = (u: AdminUser) => {
     setEditUser(u);
-    setForm({ name: u.name, email: u.email, password: u.password, phone: u.phone || "", address: u.address || "", state: u.state || "", role: u.role, status: u.status });
+    setFormError("");
+    setForm({ name: u.name, email: u.email, password: "", phone: u.phone || "", address: u.address || "", state: u.state || "", role: u.role, status: u.status });
     setShowModal(true);
   };
 
-  const handleSave = () => {
-    if (!form.name || !form.email || !form.password) return;
-    if (editUser) {
-      setUsers(prev => prev.map(u => u.id === editUser.id ? { ...u, ...form } : u));
-    } else {
-      const newUser: EditableUser = {
-        id: `usr-${Date.now()}`,
-        name: form.name, email: form.email, password: form.password,
-        phone: form.phone, address: form.address, state: form.state,
-        role: form.role, status: form.status,
-        createdAt: new Date().toISOString().split("T")[0],
-        totalOrders: 0, totalSpent: 0,
-      };
-      setUsers(prev => [newUser, ...prev]);
+  const handleSave = async () => {
+    if (!form.name || !form.email || (!editUser && !form.password)) return;
+    setSaving(true);
+    setFormError("");
+    try {
+      const res = editUser
+        ? await fetch(`/api/users/${editUser.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...form, password: form.password || undefined }),
+          })
+        : await fetch("/api/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(form),
+          });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setFormError(data.error || "Could not save user");
+        return;
+      }
+      await refetch();
+      setShowModal(false);
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
   };
 
-  const toggleStatus = (id: string) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === "active" ? "suspended" : "active" } : u));
+  const toggleStatus = async (u: AdminUser) => {
+    await fetch(`/api/users/${u.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: u.status === "active" ? "suspended" : "active" }),
+    });
+    refetch();
   };
 
-  const deleteUser = (id: string) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
+  const deleteUser = async (id: string) => {
+    await fetch(`/api/users/${id}`, { method: "DELETE" });
     setDeleteConfirm(null);
+    refetch();
   };
-
-  const getUserOrders = (userId: string) => sampleOrders.filter(o => o.userId === userId);
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -137,7 +152,7 @@ export default function AdminUsersPage() {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{u.name}</p>
-                        <p className="text-xs text-gray-400">Joined {u.createdAt}</p>
+                        <p className="text-xs text-gray-400">Joined {formatDate(u.createdAt)}</p>
                       </div>
                     </div>
                   </td>
@@ -152,15 +167,15 @@ export default function AdminUsersPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3.5 hidden lg:table-cell">
-                    <span className="font-semibold text-gray-900">{u.totalOrders || getUserOrders(u.id).length}</span>
+                    <span className="font-semibold text-gray-900">{u.totalOrders}</span>
                   </td>
                   <td className="px-4 py-3.5 hidden lg:table-cell">
                     <span className="font-semibold text-gray-900">
-                      {u.role === "admin" ? "—" : formatPrice(u.totalSpent || getUserOrders(u.id).reduce((s,o) => s+o.total, 0))}
+                      {u.role === "admin" ? "—" : formatPrice(u.totalSpent)}
                     </span>
                   </td>
                   <td className="px-4 py-3.5">
-                    <button onClick={() => toggleStatus(u.id)} className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold ${u.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700"}`}>
+                    <button onClick={() => toggleStatus(u)} className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-semibold ${u.status === "active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700"}`}>
                       {u.status === "active" ? <CheckCircle size={11} /> : <Ban size={11} />}
                       {u.status}
                     </button>
@@ -190,6 +205,9 @@ export default function AdminUsersPage() {
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
             </div>
             <div className="p-5 space-y-4">
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">{formError}</div>
+              )}
               {[
                 { label: "Full Name *", key: "name", type: "text", placeholder: "Ada Okonkwo" },
                 { label: "Email *", key: "email", type: "email", placeholder: "ada@example.com" },
@@ -204,9 +222,11 @@ export default function AdminUsersPage() {
                 </div>
               ))}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password {editUser ? "(leave blank to keep current)" : "*"}
+                </label>
                 <div className="relative">
-                  <input type={showPass ? "text" : "password"} value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="Min. 8 characters"
+                  <input type={showPass ? "text" : "password"} value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))} placeholder="Min. 6 characters"
                     className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                   <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">{showPass ? <EyeOff size={15} /> : <Eye size={15} />}</button>
                 </div>
@@ -232,7 +252,9 @@ export default function AdminUsersPage() {
             </div>
             <div className="flex gap-3 p-5 border-t border-gray-100">
               <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 text-sm">Cancel</button>
-              <button onClick={handleSave} className="flex-1 py-2.5 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 text-sm">{editUser ? "Save Changes" : "Create User"}</button>
+              <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 text-sm disabled:opacity-60">
+                {saving ? "Saving..." : editUser ? "Save Changes" : "Create User"}
+              </button>
             </div>
           </div>
         </div>
@@ -262,24 +284,23 @@ export default function AdminUsersPage() {
                 { label: "Phone", value: viewUser.phone },
                 { label: "Address", value: viewUser.address },
                 { label: "State", value: viewUser.state },
-                { label: "Joined", value: viewUser.createdAt },
-                { label: "Last Login", value: viewUser.lastLogin },
-                { label: "Password", value: viewUser.password },
+                { label: "Joined", value: formatDate(viewUser.createdAt) },
+                { label: "Last Login", value: viewUser.lastLogin ? formatDate(viewUser.lastLogin) : null },
               ].map(({ label, value }) => value && (
                 <div key={label} className="flex justify-between items-center py-2 border-b border-gray-50">
                   <span className="text-sm text-gray-500">{label}</span>
-                  <span className={`text-sm font-semibold text-gray-900 ${label === "Password" ? "font-mono bg-gray-100 px-2 py-0.5 rounded text-xs" : ""}`}>{value}</span>
+                  <span className="text-sm font-semibold text-gray-900">{value}</span>
                 </div>
               ))}
               {viewUser.role === "user" && (
                 <>
                   <div className="flex justify-between py-2 border-b border-gray-50">
                     <span className="text-sm text-gray-500">Total Orders</span>
-                    <span className="font-bold text-gray-900">{getUserOrders(viewUser.id).length}</span>
+                    <span className="font-bold text-gray-900">{viewUser.totalOrders}</span>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-sm text-gray-500">Total Spent</span>
-                    <span className="font-bold text-green-700">{formatPrice(getUserOrders(viewUser.id).reduce((s,o) => s+o.total, 0))}</span>
+                    <span className="font-bold text-green-700">{formatPrice(viewUser.totalSpent)}</span>
                   </div>
                 </>
               )}
@@ -304,5 +325,4 @@ export default function AdminUsersPage() {
       )}
     </div>
   );
-
 }

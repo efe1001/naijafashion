@@ -1,31 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save, Store, Bell, Shield, Truck, CreditCard, CheckCircle2, MessageCircle } from "lucide-react";
 import { useSettingsStore } from "@/store/settingsStore";
 
 export default function AdminSettingsPage() {
-  const { whatsappNumber, setWhatsappNumber } = useSettingsStore();
-  const [saved, setSaved] = useState(false);
-  const [store, setStore] = useState({
-    name: "iFashion", tagline: "Nigeria's Premier Fashion Store",
-    email: "hello@ifashion.ng", phone: "+234 801 234 5678",
-    address: "15 Bode Thomas Street, Surulere, Lagos",
-    currency: "NGN", freeDeliveryThreshold: "50000",
-    deliveryFee: "3500",
-  });
-  const [notifications, setNotifications] = useState({
-    newOrder: true, orderShipped: true, lowStock: true, newUser: false, paymentFailed: true,
-  });
-  const [payment, setPayment] = useState({
-    monnifyApiKey: "MK_TEST_SMRU9ZUSV7",
-    monnifyContractCode: "6594730824",
-    enableCard: true, enableTransfer: true, enableUssd: true, enablePhoneNumber: true,
-  });
+  const {
+    whatsappNumber: savedWhatsapp,
+    storeInfo: savedStoreInfo,
+    notifications: savedNotifications,
+    payment: savedPayment,
+    saveSettings,
+  } = useSettingsStore();
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState(savedWhatsapp);
+  const [store, setStore] = useState(savedStoreInfo);
+  const [notifications, setNotifications] = useState(savedNotifications);
+  const [payment, setPayment] = useState(savedPayment);
+
+  // Sync local drafts once settings finish loading from the server
+  useEffect(() => { setWhatsappNumber(savedWhatsapp); }, [savedWhatsapp]);
+  useEffect(() => { setStore(savedStoreInfo); }, [savedStoreInfo]);
+  useEffect(() => { setNotifications(savedNotifications); }, [savedNotifications]);
+  useEffect(() => { setPayment(savedPayment); }, [savedPayment]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await saveSettings({ whatsappNumber, storeInfo: store, notifications, payment });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -37,9 +46,10 @@ export default function AdminSettingsPage() {
         </div>
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 bg-green-700 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-green-800 transition-colors shadow-lg shadow-green-200 text-sm"
+          disabled={saving}
+          className="flex items-center gap-2 bg-green-700 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-green-800 transition-colors shadow-lg shadow-green-200 text-sm disabled:opacity-60"
         >
-          {saved ? <><CheckCircle2 size={16} /> Saved!</> : <><Save size={16} /> Save Changes</>}
+          {saved ? <><CheckCircle2 size={16} /> Saved!</> : <><Save size={16} /> {saving ? "Saving..." : "Save Changes"}</>}
         </button>
       </div>
 
@@ -72,6 +82,11 @@ export default function AdminSettingsPage() {
                 onChange={e => setStore(p => ({ ...p, [key]: e.target.value }))}
                 className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               />
+              {key === "phone" && (
+                <p className="text-xs text-gray-400 mt-1">
+                  General contact number shown to customers. This is not the WhatsApp number — set that below.
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -92,7 +107,7 @@ export default function AdminSettingsPage() {
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
             <p className="text-xs text-gray-400 mt-1">
-              Customers use the &quot;Send Details to Admin on WhatsApp&quot; button on product pages to reach this number. Changes save instantly.
+              Customers use the &quot;Send Details to Admin on WhatsApp&quot; button on product pages to reach this number.
             </p>
           </div>
         </div>

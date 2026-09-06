@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, ArrowRight } from "lucide-react";
 import { useWishlistStore } from "@/store/wishlistStore";
 import ProductCard from "@/components/ProductCard";
 
 export default function WishlistPage() {
-  const { items, clearWishlist } = useWishlistStore();
-  const [mounted, setMounted] = useState(false);
+  const { items, loaded, clearWishlist } = useWishlistStore();
 
-  useEffect(() => { setMounted(true); }, []);
-
-  if (!mounted) {
+  if (!loaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-green-200 border-t-green-700 rounded-full animate-spin" />

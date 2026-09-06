@@ -3,22 +3,24 @@
 import { useState, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ShoppingBag, Heart, Star, ChevronRight, Minus, Plus, Shield, Truck, RefreshCw } from "lucide-react";
-import { products } from "@/data/products";
 import { useCartStore } from "@/store/cartStore";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useSettingsStore } from "@/store/settingsStore";
-import { useProductVideoStore } from "@/store/productVideoStore";
+import { useProduct, useProducts } from "@/lib/useProducts";
 import { formatPrice, buildWhatsAppLink } from "@/lib/utils";
 import ProductCard from "@/components/ProductCard";
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const product = products.find((p) => p.id === id);
+  const router = useRouter();
+  const { product, loading, notFound } = useProduct(id);
+  const { products: allProducts } = useProducts();
   const { addItem } = useCartStore();
   const { toggleWishlist, isWishlisted } = useWishlistStore();
   const { whatsappNumber } = useSettingsStore();
-  const productVideo = useProductVideoStore((s) => (product ? s.videos[product.id] : undefined));
+  const productVideo = product?.videoUrl;
 
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
@@ -28,7 +30,15 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [sizeError, setSizeError] = useState(false);
   const [colorError, setColorError] = useState(false);
 
-  if (!product) {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-green-200 border-t-green-700 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (notFound || !product) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -41,7 +51,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     );
   }
 
-  const related = products
+  const related = allProducts
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
@@ -50,6 +60,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     : 0;
 
   const wishlisted = isWishlisted(product.id);
+
+  const handleToggleWishlist = async () => {
+    const result = await toggleWishlist(product);
+    if (result.requiresAuth) router.push("/login");
+  };
 
   const handleAddToCart = () => {
     if (!selectedSize) { setSizeError(true); return; }
@@ -71,11 +86,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       selectedSize ? `Size: ${selectedSize}` : null,
       selectedColor ? `Color: ${selectedColor}` : null,
       `Image: ${product.images[0]}`,
-      productVideo && !productVideo.startsWith("data:")
-        ? `Video: ${productVideo}`
-        : productVideo
-          ? `🎥 Video available — view it on the product page below`
-          : null,
+      productVideo ? `Video: ${productVideo}` : null,
       `Link: ${typeof window !== "undefined" ? window.location.href : ""}`,
     ].filter(Boolean);
     window.open(buildWhatsAppLink(whatsappNumber, lines.join("\n")), "_blank");
@@ -286,7 +297,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 {addedToCart ? "Added to Cart!" : "Add to Cart"}
               </button>
               <button
-                onClick={() => toggleWishlist(product)}
+                onClick={handleToggleWishlist}
                 className={`p-3.5 rounded-xl border-2 transition-colors ${
                   wishlisted
                     ? "border-red-400 bg-red-50 text-red-500"

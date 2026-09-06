@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import { SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
-import { products, categories } from "@/data/products";
+import { categories } from "@/data/products";
+import { useProducts } from "@/lib/useProducts";
 import { SortOption } from "@/types";
 
 const sortOptions: { label: string; value: SortOption }[] = [
@@ -15,6 +16,7 @@ const sortOptions: { label: string; value: SortOption }[] = [
 ];
 
 export default function ProductsPage() {
+  const { products } = useProducts();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedOrigin, setSelectedOrigin] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("featured");
@@ -50,7 +52,7 @@ export default function ProductsPage() {
     }
 
     return result;
-  }, [selectedCategory, selectedOrigin, sortBy, priceRange]);
+  }, [products, selectedCategory, selectedOrigin, sortBy, priceRange]);
 
   const activeFilterCount = [
     selectedCategory !== "all",

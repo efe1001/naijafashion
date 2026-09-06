@@ -3,16 +3,15 @@
 import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, Star, Filter, X, Video as VideoIcon, Upload } from "lucide-react";
-import { products as initialProducts } from "@/data/products";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { uploadFileToR2 } from "@/lib/upload";
-import { useProductVideoStore } from "@/store/productVideoStore";
+import { useProducts } from "@/lib/useProducts";
 
 const CATEGORIES = ["All", "nigerian-traditional", "women", "men", "kids", "accessories", "international"];
 
 export default function AdminProductsPage() {
-  const [productList, setProductList] = useState<Product[]>(initialProducts);
+  const { products, refetch } = useProducts();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
@@ -22,8 +21,8 @@ export default function AdminProductsPage() {
   const [videoUrlInput, setVideoUrlInput] = useState("");
   const [videoUploadError, setVideoUploadError] = useState("");
   const [videoUploading, setVideoUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const videoFileRef = useRef<HTMLInputElement>(null);
-  const { videos, setVideo, removeVideo } = useProductVideoStore();
 
   const [form, setForm] = useState({
     name: "", price: "", originalPrice: "", category: "men", subcategory: "",
@@ -32,13 +31,13 @@ export default function AdminProductsPage() {
   });
 
   const filtered = useMemo(() => {
-    return productList.filter(p => {
+    return products.filter(p => {
       const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.subcategory.toLowerCase().includes(search.toLowerCase());
       const matchCat = categoryFilter === "All" || p.category === categoryFilter;
       return matchSearch && matchCat;
     });
-  }, [productList, search, categoryFilter]);
+  }, [products, search, categoryFilter]);
 
   const openAdd = () => {
     setEditProduct(null);
@@ -57,9 +56,9 @@ export default function AdminProductsPage() {
     setShowModal(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name || !form.price) return;
-    const payload: Partial<Product> = {
+    const payload = {
       name: form.name,
       price: Number(form.price),
       originalPrice: form.originalPrice ? Number(form.originalPrice) : undefined,
@@ -73,35 +72,46 @@ export default function AdminProductsPage() {
       badge: form.badge || undefined,
     };
 
-    if (editProduct) {
-      setProductList(prev => prev.map(p => p.id === editProduct.id ? { ...p, ...payload } : p));
-    } else {
-      const newProduct: Product = {
-        id: `prd-${Date.now()}`,
-        images: ["https://images.unsplash.com/photo-1488161628813-04466f872be2?w=600&q=80"],
-        inStock: true,
-        rating: 0,
-        reviewCount: 0,
-        ...payload,
-      } as Product;
-      setProductList(prev => [newProduct, ...prev]);
+    setSaving(true);
+    try {
+      if (editProduct) {
+        await fetch(`/api/products/${editProduct.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await fetch("/api/products", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+      await refetch();
+      setShowModal(false);
+    } finally {
+      setSaving(false);
     }
-    setShowModal(false);
   };
 
-  const toggleStock = (id: string) => {
-    setProductList(prev => prev.map(p => p.id === id ? { ...p, inStock: !p.inStock } : p));
+  const toggleStock = async (p: Product) => {
+    await fetch(`/api/products/${p.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ inStock: !p.inStock }),
+    });
+    refetch();
   };
 
-  const deleteProduct = (id: string) => {
-    setProductList(prev => prev.filter(p => p.id !== id));
+  const deleteProduct = async (id: string) => {
+    await fetch(`/api/products/${id}`, { method: "DELETE" });
     setDeleteConfirm(null);
+    refetch();
   };
 
   const openVideo = (p: Product) => {
     setVideoProduct(p);
-    const existing = videos[p.id] || "";
-    setVideoUrlInput(existing.startsWith("data:") ? "" : existing);
+    setVideoUrlInput(p.videoUrl || "");
     setVideoUploadError("");
   };
 
@@ -110,6 +120,15 @@ export default function AdminProductsPage() {
     setVideoUrlInput("");
     setVideoUploadError("");
     if (videoFileRef.current) videoFileRef.current.value = "";
+  };
+
+  const saveVideoUrl = async (productId: string, videoUrl: string) => {
+    await fetch(`/api/products/${productId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ videoUrl: videoUrl || null }),
+    });
+    await refetch();
   };
 
   const handleVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,7 +146,9 @@ export default function AdminProductsPage() {
     setVideoUploading(true);
     try {
       const publicUrl = await uploadFileToR2(file, "products");
-      setVideo(videoProduct.id, publicUrl);
+      await saveVideoUrl(videoProduct.id, publicUrl);
+      setVideoProduct((prev) => (prev ? { ...prev, videoUrl: publicUrl } : prev));
+      setVideoUrlInput(publicUrl);
     } catch (err) {
       setVideoUploadError(err instanceof Error ? err.message : "Upload failed. Please try again.");
     } finally {
@@ -136,9 +157,17 @@ export default function AdminProductsPage() {
     }
   };
 
-  const handleSaveVideoUrl = () => {
+  const handleSaveVideoUrl = async () => {
     if (!videoProduct || !videoUrlInput.trim()) return;
-    setVideo(videoProduct.id, videoUrlInput.trim());
+    await saveVideoUrl(videoProduct.id, videoUrlInput.trim());
+    setVideoProduct((prev) => (prev ? { ...prev, videoUrl: videoUrlInput.trim() } : prev));
+  };
+
+  const handleRemoveVideo = async () => {
+    if (!videoProduct) return;
+    await saveVideoUrl(videoProduct.id, "");
+    setVideoProduct((prev) => (prev ? { ...prev, videoUrl: undefined } : prev));
+    setVideoUrlInput("");
   };
 
   return (
@@ -147,7 +176,7 @@ export default function AdminProductsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900">Products</h1>
-          <p className="text-gray-500 text-sm">{filtered.length} of {productList.length} products</p>
+          <p className="text-gray-500 text-sm">{filtered.length} of {products.length} products</p>
         </div>
         <button
           onClick={openAdd}
@@ -213,7 +242,7 @@ export default function AdminProductsPage() {
                           {p.badge && (
                             <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">{p.badge}</span>
                           )}
-                          {videos[p.id] && (
+                          {p.videoUrl && (
                             <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">
                               <VideoIcon size={10} /> Video
                             </span>
@@ -241,7 +270,7 @@ export default function AdminProductsPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3.5 hidden lg:table-cell">
-                    <button onClick={() => toggleStock(p.id)} className="flex items-center gap-1.5 group">
+                    <button onClick={() => toggleStock(p)} className="flex items-center gap-1.5 group">
                       {p.inStock
                         ? <ToggleRight size={20} className="text-green-500" />
                         : <ToggleLeft size={20} className="text-gray-400" />}
@@ -266,7 +295,7 @@ export default function AdminProductsPage() {
                       </button>
                       <button
                         onClick={() => openVideo(p)}
-                        className={`p-2 rounded-lg transition-colors ${videos[p.id] ? "text-purple-600 hover:bg-purple-50" : "text-gray-400 hover:bg-gray-100"}`}
+                        className={`p-2 rounded-lg transition-colors ${p.videoUrl ? "text-purple-600 hover:bg-purple-50" : "text-gray-400 hover:bg-gray-100"}`}
                         title="Video"
                       >
                         <VideoIcon size={15} />
@@ -361,8 +390,8 @@ export default function AdminProductsPage() {
               <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors text-sm">
                 Cancel
               </button>
-              <button onClick={handleSave} className="flex-1 py-2.5 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 transition-colors text-sm">
-                {editProduct ? "Save Changes" : "Add Product"}
+              <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 transition-colors text-sm disabled:opacity-60">
+                {saving ? "Saving..." : editProduct ? "Save Changes" : "Add Product"}
               </button>
             </div>
           </div>
@@ -381,9 +410,9 @@ export default function AdminProductsPage() {
               <button onClick={closeVideoModal} className="p-2 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
             </div>
             <div className="p-5 space-y-4">
-              {videos[videoProduct.id] && (
+              {videoProduct.videoUrl && (
                 <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
-                  <video src={videos[videoProduct.id]} controls className="w-full h-full" />
+                  <video src={videoProduct.videoUrl} controls className="w-full h-full" />
                 </div>
               )}
 
@@ -427,9 +456,9 @@ export default function AdminProductsPage() {
                 </div>
               </div>
 
-              {videos[videoProduct.id] && (
+              {videoProduct.videoUrl && (
                 <button
-                  onClick={() => { removeVideo(videoProduct.id); setVideoUrlInput(""); }}
+                  onClick={handleRemoveVideo}
                   className="w-full flex items-center justify-center gap-2 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors text-sm font-medium"
                 >
                   <Trash2 size={15} /> Remove Video

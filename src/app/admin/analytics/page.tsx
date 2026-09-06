@@ -1,26 +1,28 @@
 "use client";
 
-import { sampleOrders } from "@/data/orders";
-import { products } from "@/data/products";
-import { ACCOUNTS } from "@/store/authStore";
+import { useOrders } from "@/lib/useOrders";
+import { useProducts } from "@/lib/useProducts";
+import { useUsers } from "@/lib/useUsers";
 import { formatPrice } from "@/lib/utils";
 
-const revenue = sampleOrders.filter(o => !["cancelled","refunded"].includes(o.status)).reduce((s,o) => s+o.total, 0);
-
-const categoryRevenue = products.reduce<Record<string,number>>((acc, p) => {
-  const cat = p.category.replace(/-/g," ");
-  acc[cat] = (acc[cat] || 0) + p.price;
-  return acc;
-}, {});
-const maxCatRev = Math.max(...Object.values(categoryRevenue));
-
-const topCustomers = ACCOUNTS.filter(a => a.role === "user").map(u => ({
-  ...u,
-  orders: sampleOrders.filter(o => o.userId === u.id),
-  spent: sampleOrders.filter(o => o.userId === u.id && !["cancelled","refunded"].includes(o.status)).reduce((s,o) => s+o.total, 0),
-})).sort((a,b) => b.spent - a.spent);
-
 export default function AnalyticsPage() {
+  const { orders: sampleOrders } = useOrders();
+  const { products } = useProducts();
+  const { users } = useUsers();
+
+  const revenue = sampleOrders.filter(o => !["cancelled","refunded"].includes(o.status)).reduce((s,o) => s+o.total, 0);
+
+  const categoryRevenue = products.reduce<Record<string,number>>((acc, p) => {
+    const cat = p.category.replace(/-/g," ");
+    acc[cat] = (acc[cat] || 0) + p.price;
+    return acc;
+  }, {});
+  const maxCatRev = Math.max(...Object.values(categoryRevenue), 1);
+
+  const topCustomers = users.filter(u => u.role === "user")
+    .map(u => ({ ...u, orders: { length: u.totalOrders }, spent: u.totalSpent }))
+    .sort((a,b) => b.spent - a.spent);
+
   return (
     <div className="p-6 lg:p-8 space-y-8">
       <div>
@@ -32,7 +34,7 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Total Revenue", value: formatPrice(revenue), sub: "All time" },
-          { label: "Avg Order Value", value: formatPrice(revenue / sampleOrders.length), sub: `from ${sampleOrders.length} orders` },
+          { label: "Avg Order Value", value: formatPrice(sampleOrders.length ? revenue / sampleOrders.length : 0), sub: `from ${sampleOrders.length} orders` },
           { label: "Conversion Rate", value: "3.8%", sub: "Visits to orders" },
           { label: "Return Rate", value: "8.2%", sub: "Customers who re-ordered" },
         ].map(({ label, value, sub }) => (
@@ -90,7 +92,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-3 gap-4">
           {["card","transfer","ussd"].map(method => {
             const count = sampleOrders.filter(o => o.paymentMethod === method).length;
-            const pct = Math.round((count/sampleOrders.length)*100);
+            const pct = sampleOrders.length ? Math.round((count/sampleOrders.length)*100) : 0;
             return (
               <div key={method} className="text-center">
                 <div className="relative w-20 h-20 mx-auto mb-3">
