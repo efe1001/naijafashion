@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ShoppingBag, Search, Menu, X, Heart, ChevronDown, User, LogOut, ShieldCheck } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
+import { useWishlistStore } from "@/store/wishlistStore";
 
 const navLinks = [
   {
@@ -48,6 +49,7 @@ const navLinks = [
 export default function Navbar() {
   const { getTotalItems, toggleCart } = useCartStore();
   const { currentUser, isAuthenticated, logout } = useAuthStore();
+  const wishlistCount = useWishlistStore((s) => s.items.length);
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -85,12 +87,12 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-              <div className="w-9 h-9 bg-gradient-to-br from-green-600 to-green-800 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">NF</span>
+            <Link href="/" className="flex items-center gap-2 shrink-0">
+              <div className="w-9 h-9 bg-linear-to-br from-green-600 to-green-800 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-sm">iF</span>
               </div>
               <div className="hidden sm:block">
-                <span className="font-extrabold text-xl text-gray-900 tracking-tight">Naija</span>
+                <span className="font-extrabold text-xl text-gray-900 tracking-tight">i</span>
                 <span className="font-extrabold text-xl text-green-700 tracking-tight">Fashion</span>
               </div>
             </Link>
@@ -140,10 +142,15 @@ export default function Navbar() {
               </button>
               <Link
                 href="/wishlist"
-                className="hidden sm:flex p-2 text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-full transition-colors"
+                className="hidden sm:flex relative p-2 text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-full transition-colors"
                 aria-label="Wishlist"
               >
                 <Heart size={20} />
+                {mounted && wishlistCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-green-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    {wishlistCount > 9 ? "9+" : wishlistCount}
+                  </span>
+                )}
               </Link>
               <button
                 onClick={toggleCart}

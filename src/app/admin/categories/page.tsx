@@ -40,7 +40,7 @@ export default function AdminCategoriesPage() {
           <div key={c.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
             <div className="relative h-36 bg-gray-100">
               {c.image && <Image src={c.image} alt={c.name} fill className="object-cover" sizes="400px" />}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-3 left-4">
                 <p className="text-white font-bold text-lg">{c.name}</p>
                 <p className="text-gray-300 text-xs">{c.itemCount} products</p>

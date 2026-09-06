@@ -11,3 +11,8 @@ export function generateOrderId(): string {
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `NF-${timestamp}-${random}`;
 }
+
+export function buildWhatsAppLink(phone: string, message: string): string {
+  const digits = phone.replace(/\D/g, "");
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}

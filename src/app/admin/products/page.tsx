@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
-import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, Star, Filter, X } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, Star, Filter, X, Video as VideoIcon, Upload } from "lucide-react";
 import { products as initialProducts } from "@/data/products";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
+import { useProductVideoStore } from "@/store/productVideoStore";
 
 const CATEGORIES = ["All", "nigerian-traditional", "women", "men", "kids", "accessories", "international"];
 
@@ -16,6 +17,11 @@ export default function AdminProductsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [videoProduct, setVideoProduct] = useState<Product | null>(null);
+  const [videoUrlInput, setVideoUrlInput] = useState("");
+  const [videoUploadError, setVideoUploadError] = useState("");
+  const videoFileRef = useRef<HTMLInputElement>(null);
+  const { videos, setVideo, removeVideo } = useProductVideoStore();
 
   const [form, setForm] = useState({
     name: "", price: "", originalPrice: "", category: "men", subcategory: "",
@@ -90,6 +96,44 @@ export default function AdminProductsPage() {
     setDeleteConfirm(null);
   };
 
+  const openVideo = (p: Product) => {
+    setVideoProduct(p);
+    const existing = videos[p.id] || "";
+    setVideoUrlInput(existing.startsWith("data:") ? "" : existing);
+    setVideoUploadError("");
+  };
+
+  const closeVideoModal = () => {
+    setVideoProduct(null);
+    setVideoUrlInput("");
+    setVideoUploadError("");
+    if (videoFileRef.current) videoFileRef.current.value = "";
+  };
+
+  const handleVideoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !videoProduct) return;
+    if (!file.type.startsWith("video/")) {
+      setVideoUploadError("Please select a video file.");
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setVideoUploadError("Video is too large — keep uploads under 15MB.");
+      return;
+    }
+    setVideoUploadError("");
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") setVideo(videoProduct.id, reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveVideoUrl = () => {
+    if (!videoProduct || !videoUrlInput.trim()) return;
+    setVideo(videoProduct.id, videoUrlInput.trim());
+  };
+
   return (
     <div className="p-6 lg:p-8 space-y-6">
       {/* Header */}
@@ -158,9 +202,16 @@ export default function AdminProductsPage() {
                       <div>
                         <p className="font-semibold text-gray-900 line-clamp-1">{p.name}</p>
                         <p className="text-xs text-gray-400">{p.id}</p>
-                        {p.badge && (
-                          <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">{p.badge}</span>
-                        )}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {p.badge && (
+                            <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">{p.badge}</span>
+                          )}
+                          {videos[p.id] && (
+                            <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">
+                              <VideoIcon size={10} /> Video
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -205,6 +256,13 @@ export default function AdminProductsPage() {
                         title="Edit"
                       >
                         <Edit2 size={15} />
+                      </button>
+                      <button
+                        onClick={() => openVideo(p)}
+                        className={`p-2 rounded-lg transition-colors ${videos[p.id] ? "text-purple-600 hover:bg-purple-50" : "text-gray-400 hover:bg-gray-100"}`}
+                        title="Video"
+                      >
+                        <VideoIcon size={15} />
                       </button>
                       <button
                         onClick={() => setDeleteConfirm(p.id)}
@@ -298,6 +356,77 @@ export default function AdminProductsPage() {
               </button>
               <button onClick={handleSave} className="flex-1 py-2.5 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 transition-colors text-sm">
                 {editProduct ? "Save Changes" : "Add Product"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Video modal */}
+      {videoProduct && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div>
+                <h2 className="font-bold text-gray-900 text-lg">Product Video</h2>
+                <p className="text-xs text-gray-400 line-clamp-1">{videoProduct.name}</p>
+              </div>
+              <button onClick={closeVideoModal} className="p-2 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              {videos[videoProduct.id] && (
+                <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
+                  <video src={videos[videoProduct.id]} controls className="w-full h-full" />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Upload a video file</label>
+                <button
+                  onClick={() => videoFileRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-green-400 hover:text-green-700 transition-colors"
+                >
+                  <Upload size={15} /> Choose Video File
+                </button>
+                <input ref={videoFileRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFile} />
+                {videoUploadError && <p className="text-red-500 text-xs mt-1">{videoUploadError}</p>}
+                <p className="text-xs text-gray-400 mt-1">Stored in this browser — keep clips short (under 15MB).</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-px bg-gray-100" />
+                <span className="text-xs text-gray-400">OR</span>
+                <div className="flex-1 h-px bg-gray-100" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Paste a video URL</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={videoUrlInput}
+                    onChange={e => setVideoUrlInput(e.target.value)}
+                    placeholder="https://..."
+                    className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  <button onClick={handleSaveVideoUrl} className="px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition-colors">
+                    Use
+                  </button>
+                </div>
+              </div>
+
+              {videos[videoProduct.id] && (
+                <button
+                  onClick={() => { removeVideo(videoProduct.id); setVideoUrlInput(""); }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors text-sm font-medium"
+                >
+                  <Trash2 size={15} /> Remove Video
+                </button>
+              )}
+            </div>
+            <div className="flex gap-3 p-5 border-t border-gray-100">
+              <button onClick={closeVideoModal} className="flex-1 py-2.5 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 transition-colors text-sm">
+                Done
               </button>
             </div>
           </div>

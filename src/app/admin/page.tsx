@@ -116,7 +116,7 @@ export default function AdminDashboard() {
               <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
                 <span className="text-xs text-gray-500 font-medium">{formatPrice(m.value).replace("₦", "").replace(",000", "k")}</span>
                 <div
-                  className="w-full bg-gradient-to-t from-green-600 to-green-400 rounded-t-lg transition-all hover:from-green-700 hover:to-green-500 cursor-pointer"
+                  className="w-full bg-linear-to-t from-green-600 to-green-400 rounded-t-lg transition-all hover:from-green-700 hover:to-green-500 cursor-pointer"
                   style={{ height: `${(m.value / maxRevenue) * 100}%`, minHeight: "8px" }}
                 />
                 <span className="text-xs text-gray-500 font-medium">{m.month}</span>

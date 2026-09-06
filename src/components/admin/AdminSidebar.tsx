@@ -37,10 +37,10 @@ export default function AdminSidebar() {
       <div className="p-5 border-b border-gray-800">
         <Link href="/admin" className="flex items-center gap-2">
           <div className="w-9 h-9 bg-green-600 rounded-xl flex items-center justify-center">
-            <span className="text-white font-extrabold text-sm">NF</span>
+            <span className="text-white font-extrabold text-sm">iF</span>
           </div>
           <div>
-            <p className="text-white font-extrabold text-sm leading-none">NaijaFashion</p>
+            <p className="text-white font-extrabold text-sm leading-none">iFashion</p>
             <p className="text-green-400 text-xs font-medium">Admin Panel</p>
           </div>
         </Link>
@@ -49,7 +49,7 @@ export default function AdminSidebar() {
       {/* Admin info */}
       <div className="p-4 border-b border-gray-800">
         <div className="flex items-center gap-3 bg-gray-800/50 rounded-xl p-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-green-700 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+          <div className="w-9 h-9 bg-linear-to-br from-green-500 to-green-700 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
             {currentUser?.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
           </div>
           <div className="min-w-0">
@@ -134,7 +134,7 @@ export default function AdminSidebar() {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex w-64 bg-gray-900 min-h-screen flex-col flex-shrink-0">
+      <div className="hidden lg:flex w-64 bg-gray-900 min-h-screen flex-col shrink-0">
         <SidebarContent />
       </div>
     </>

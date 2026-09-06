@@ -70,6 +70,6 @@ export const useCartStore = create<CartStore>()(
       getTotalItems: () => get().items.reduce((acc, item) => acc + item.quantity, 0),
       getTotalPrice: () => get().items.reduce((acc, item) => acc + item.price * item.quantity, 0),
     }),
-    { name: "naijafashion-cart" }
+    { name: "ifashion-cart" }
   )
 );

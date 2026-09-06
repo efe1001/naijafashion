@@ -48,16 +48,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-950 via-green-900 to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-green-950 via-green-900 to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-4">
             <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-extrabold text-lg">NF</span>
+              <span className="text-white font-extrabold text-lg">iF</span>
             </div>
             <span className="text-2xl font-extrabold text-white">
-              Naija<span className="text-green-400">Fashion</span>
+              i<span className="text-green-400">Fashion</span>
             </span>
           </Link>
           <p className="text-gray-400 text-sm">Sign in to your account</p>
@@ -140,20 +140,20 @@ export default function LoginPage() {
             </p>
             <div className="space-y-2">
               <button
-                onClick={() => quickFill("admin@naijafashion.ng", "Admin@2025")}
+                onClick={() => quickFill("admin@ifashion.ng", "Admin@2025")}
                 className="w-full flex items-center justify-between px-4 py-2.5 bg-green-50 hover:bg-green-100 border border-green-200 rounded-xl transition-colors"
               >
                 <div className="text-left">
                   <p className="text-xs font-bold text-green-800">Admin Account</p>
-                  <p className="text-xs text-green-600">admin@naijafashion.ng</p>
+                  <p className="text-xs text-green-600">admin@ifashion.ng</p>
                 </div>
                 <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full font-bold">ADMIN</span>
               </button>
 
               {[
-                { name: "Adaeze Okonkwo", email: "ada@naijafashion.ng", pass: "Ada@2025" },
-                { name: "Emeka Nwosu", email: "emeka@naijafashion.ng", pass: "Emeka@2025" },
-                { name: "Fatima Bello", email: "fatima@naijafashion.ng", pass: "Fatima@2025" },
+                { name: "Adaeze Okonkwo", email: "ada@ifashion.ng", pass: "Ada@2025" },
+                { name: "Emeka Nwosu", email: "emeka@ifashion.ng", pass: "Emeka@2025" },
+                { name: "Fatima Bello", email: "fatima@ifashion.ng", pass: "Fatima@2025" },
               ].map((u) => (
                 <button
                   key={u.email}

@@ -56,7 +56,7 @@ export default function AnalyticsPage() {
                   <span className="text-sm font-bold text-gray-900">{formatPrice(val)}</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full" style={{ width: `${(val/maxCatRev)*100}%` }} />
+                  <div className="h-full bg-linear-to-r from-green-500 to-green-400 rounded-full" style={{ width: `${(val/maxCatRev)*100}%` }} />
                 </div>
               </div>
             ))}
@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
             return (
               <div key={method} className="text-center">
                 <div className="relative w-20 h-20 mx-auto mb-3">
-                  <svg viewBox="0 0 36 36" className="w-full h-full rotate-[-90deg]">
+                  <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                     <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" strokeWidth="3" />
                     <circle cx="18" cy="18" r="15.9" fill="none" stroke="#16a34a" strokeWidth="3"
                       strokeDasharray={`${pct} ${100-pct}`} strokeLinecap="round" />

@@ -25,7 +25,7 @@ function OrderContent() {
         {/* Success card */}
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-br from-green-700 to-green-600 p-8 text-center">
+          <div className="bg-linear-to-br from-green-700 to-green-600 p-8 text-center">
             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle size={40} className="text-white" />
             </div>
@@ -113,8 +113,8 @@ function OrderContent() {
 
         <p className="text-center text-xs text-gray-400 mt-5">
           Questions? Email us at{" "}
-          <a href="mailto:hello@naijafashion.ng" className="text-green-700 hover:underline">
-            hello@naijafashion.ng
+          <a href="mailto:hello@ifashion.ng" className="text-green-700 hover:underline">
+            hello@ifashion.ng
           </a>{" "}
           or call{" "}
           <a href="tel:+2348012345678" className="text-green-700 hover:underline">

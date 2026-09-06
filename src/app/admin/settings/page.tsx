@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Save, Store, Bell, Shield, Truck, CreditCard, CheckCircle2 } from "lucide-react";
+import { Save, Store, Bell, Shield, Truck, CreditCard, CheckCircle2, MessageCircle } from "lucide-react";
+import { useSettingsStore } from "@/store/settingsStore";
 
 export default function AdminSettingsPage() {
+  const { whatsappNumber, setWhatsappNumber } = useSettingsStore();
   const [saved, setSaved] = useState(false);
   const [store, setStore] = useState({
-    name: "NaijaFashion", tagline: "Nigeria's Premier Fashion Store",
-    email: "hello@naijafashion.ng", phone: "+234 801 234 5678",
+    name: "iFashion", tagline: "Nigeria's Premier Fashion Store",
+    email: "hello@ifashion.ng", phone: "+234 801 234 5678",
     address: "15 Bode Thomas Street, Surulere, Lagos",
     currency: "NGN", freeDeliveryThreshold: "50000",
     deliveryFee: "3500",
@@ -72,6 +74,27 @@ export default function AdminSettingsPage() {
               />
             </div>
           ))}
+        </div>
+
+        {/* WhatsApp Contact */}
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <MessageCircle size={18} className="text-green-700" />
+            <h2 className="font-bold text-gray-900">WhatsApp Contact</h2>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Admin WhatsApp Number</label>
+            <input
+              type="tel"
+              value={whatsappNumber}
+              onChange={e => setWhatsappNumber(e.target.value)}
+              placeholder="+234 801 234 5678"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Customers use the &quot;Send Details to Admin on WhatsApp&quot; button on product pages to reach this number. Changes save instantly.
+            </p>
+          </div>
         </div>
 
         {/* Delivery Settings */}

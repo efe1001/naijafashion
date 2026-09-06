@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 
 export const metadata: Metadata = {
-  title: "NaijaFashion — Nigeria's Premier Fashion Store",
+  title: "iFashion — Nigeria's Premier Fashion Store",
   description:
     "Shop the best Nigerian traditional and international fashion — Agbada, Ankara, Aso-oke, Senator, designer wear and more. Fast delivery across Nigeria.",
   keywords: "Nigerian fashion, Ankara, Agbada, Aso-oke, Senator, African wear, clothes Nigeria",

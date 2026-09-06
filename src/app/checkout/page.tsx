@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ChevronRight, Lock, CreditCard, Smartphone, Building2, Phone } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
+import { useAuthStore } from "@/store/authStore";
 import { formatPrice, generateOrderId } from "@/lib/utils";
 import { nigerianStates } from "@/data/products";
 
@@ -42,6 +43,7 @@ function useMonnifyScript() {
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, getTotalPrice, clearCart } = useCartStore();
+  const { currentUser } = useAuthStore();
   const total = getTotalPrice();
   const delivery = total >= 50000 ? 0 : 3500;
   const grandTotal = total + delivery;
@@ -52,9 +54,24 @@ export default function CheckoutPage() {
     firstName: "", lastName: "", email: "", phone: "",
     address: "", city: "", state: "",
   });
+  const [usedSavedAddress, setUsedSavedAddress] = useState(false);
   const [payMethod, setPayMethod] = useState<MonnifyPayMethod>("CARD");
   const [processing, setProcessing] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!currentUser) return;
+    setForm((f) => ({
+      firstName: f.firstName || currentUser.name.split(" ")[0] || "",
+      lastName: f.lastName || currentUser.name.split(" ").slice(1).join(" ") || "",
+      email: f.email || currentUser.email || "",
+      phone: f.phone || currentUser.phone || "",
+      address: f.address || currentUser.address || "",
+      city: f.city,
+      state: f.state || currentUser.state || "",
+    }));
+    if (currentUser.address) setUsedSavedAddress(true);
+  }, [currentUser]);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -98,7 +115,7 @@ export default function CheckoutPage() {
       customerMobileNumber: form.phone,
       apiKey: process.env.NEXT_PUBLIC_MONNIFY_API_KEY,
       contractCode: process.env.NEXT_PUBLIC_MONNIFY_CONTRACT_CODE,
-      paymentDescription: `NaijaFashion Order ${orderId}`,
+      paymentDescription: `iFashion Order ${orderId}`,
       isTestMode: true,
       paymentMethods: [payMethod],
       metadata: {
@@ -160,7 +177,14 @@ export default function CheckoutPage() {
           <div className="lg:col-span-3 space-y-6">
             {/* Delivery Info */}
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-              <h2 className="font-bold text-gray-900 text-lg mb-5">Delivery Information</h2>
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-bold text-gray-900 text-lg">Delivery Information</h2>
+                {usedSavedAddress && (
+                  <Link href="/profile" className="text-xs text-green-700 font-semibold hover:underline">
+                    Using saved address · Edit in profile
+                  </Link>
+                )}
+              </div>
               <div className="grid sm:grid-cols-2 gap-4">
                 {field("firstName", "First Name", "text", "Ada")}
                 {field("lastName", "Last Name", "text", "Okonkwo")}
@@ -242,7 +266,7 @@ export default function CheckoutPage() {
                     <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-1.5">
                       <div className="flex justify-between">
                         <span className="text-gray-500">Account Name</span>
-                        <span className="font-bold text-gray-900">NaijaFashion Ltd</span>
+                        <span className="font-bold text-gray-900">iFashion Ltd</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500">Account Number</span>

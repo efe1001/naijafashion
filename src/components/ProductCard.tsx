@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Heart, ShoppingBag, Star } from "lucide-react";
 import { Product } from "@/types";
 import { useCartStore } from "@/store/cartStore";
+import { useWishlistStore } from "@/store/wishlistStore";
 import { formatPrice } from "@/lib/utils";
 import { useState } from "react";
 
@@ -21,7 +22,8 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const { addItem } = useCartStore();
-  const [wishlisted, setWishlisted] = useState(false);
+  const { toggleWishlist, isWishlisted } = useWishlistStore();
+  const wishlisted = isWishlisted(product.id);
   const [imgError, setImgError] = useState(false);
 
   const discount = product.originalPrice
@@ -48,7 +50,7 @@ export default function ProductCard({ product }: Props) {
               onError={() => setImgError(true)}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+            <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-green-50 to-green-100">
               <ShoppingBag size={40} className="text-green-300" />
             </div>
           )}
@@ -74,7 +76,7 @@ export default function ProductCard({ product }: Props) {
         <button
           onClick={(e) => {
             e.preventDefault();
-            setWishlisted(!wishlisted);
+            toggleWishlist(product);
           }}
           className="absolute top-3 right-3 p-2 bg-white/90 backdrop-blur-sm rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-all hover:bg-white"
         >

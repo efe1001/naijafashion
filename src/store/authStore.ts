@@ -31,8 +31,8 @@ interface AuthStore {
 export const ACCOUNTS: Array<AuthUser & { password: string }> = [
   {
     id: "usr-admin-001",
-    name: "NaijaFashion Admin",
-    email: "admin@naijafashion.ng",
+    name: "iFashion Admin",
+    email: "admin@ifashion.ng",
     password: "Admin@2025",
     role: "admin",
     phone: "+234 801 000 0001",
@@ -47,7 +47,7 @@ export const ACCOUNTS: Array<AuthUser & { password: string }> = [
   {
     id: "usr-002",
     name: "Adaeze Okonkwo",
-    email: "ada@naijafashion.ng",
+    email: "ada@ifashion.ng",
     password: "Ada@2025",
     role: "user",
     phone: "+234 802 111 2222",
@@ -62,7 +62,7 @@ export const ACCOUNTS: Array<AuthUser & { password: string }> = [
   {
     id: "usr-003",
     name: "Emeka Nwosu",
-    email: "emeka@naijafashion.ng",
+    email: "emeka@ifashion.ng",
     password: "Emeka@2025",
     role: "user",
     phone: "+234 803 222 3333",
@@ -77,7 +77,7 @@ export const ACCOUNTS: Array<AuthUser & { password: string }> = [
   {
     id: "usr-004",
     name: "Fatima Bello",
-    email: "fatima@naijafashion.ng",
+    email: "fatima@ifashion.ng",
     password: "Fatima@2025",
     role: "user",
     phone: "+234 804 333 4444",
@@ -92,7 +92,7 @@ export const ACCOUNTS: Array<AuthUser & { password: string }> = [
   {
     id: "usr-005",
     name: "Chukwuemeka Eze",
-    email: "chukwu@naijafashion.ng",
+    email: "chukwu@ifashion.ng",
     password: "Chukwu@2025",
     role: "user",
     phone: "+234 805 444 5555",
@@ -132,6 +132,6 @@ export const useAuthStore = create<AuthStore>()(
           currentUser: state.currentUser ? { ...state.currentUser, ...data } : null,
         })),
     }),
-    { name: "naijafashion-auth" }
+    { name: "ifashion-auth" }
   )
 );

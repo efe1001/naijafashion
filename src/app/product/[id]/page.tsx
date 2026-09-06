@@ -6,19 +6,24 @@ import Link from "next/link";
 import { ShoppingBag, Heart, Star, ChevronRight, Minus, Plus, Shield, Truck, RefreshCw } from "lucide-react";
 import { products } from "@/data/products";
 import { useCartStore } from "@/store/cartStore";
-import { formatPrice } from "@/lib/utils";
+import { useWishlistStore } from "@/store/wishlistStore";
+import { useSettingsStore } from "@/store/settingsStore";
+import { useProductVideoStore } from "@/store/productVideoStore";
+import { formatPrice, buildWhatsAppLink } from "@/lib/utils";
 import ProductCard from "@/components/ProductCard";
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const product = products.find((p) => p.id === id);
   const { addItem } = useCartStore();
+  const { toggleWishlist, isWishlisted } = useWishlistStore();
+  const { whatsappNumber } = useSettingsStore();
+  const productVideo = useProductVideoStore((s) => (product ? s.videos[product.id] : undefined));
 
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
-  const [wishlisted, setWishlisted] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [sizeError, setSizeError] = useState(false);
   const [colorError, setColorError] = useState(false);
@@ -44,6 +49,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
+  const wishlisted = isWishlisted(product.id);
+
   const handleAddToCart = () => {
     if (!selectedSize) { setSizeError(true); return; }
     if (!selectedColor) { setColorError(true); return; }
@@ -53,6 +60,25 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     }
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
+  };
+
+  const handleSendToWhatsApp = () => {
+    const lines = [
+      `Hi! I'm interested in this product from iFashion:`,
+      ``,
+      `*${product.name}*`,
+      `Price: ${formatPrice(product.price)}`,
+      selectedSize ? `Size: ${selectedSize}` : null,
+      selectedColor ? `Color: ${selectedColor}` : null,
+      `Image: ${product.images[0]}`,
+      productVideo && !productVideo.startsWith("data:")
+        ? `Video: ${productVideo}`
+        : productVideo
+          ? `🎥 Video available — view it on the product page below`
+          : null,
+      `Link: ${typeof window !== "undefined" ? window.location.href : ""}`,
+    ].filter(Boolean);
+    window.open(buildWhatsAppLink(whatsappNumber, lines.join("\n")), "_blank");
   };
 
   return (
@@ -111,6 +137,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     <Image src={img} alt="" fill className="object-cover" sizes="80px" />
                   </button>
                 ))}
+              </div>
+            )}
+            {productVideo && (
+              <div className="relative aspect-video rounded-2xl overflow-hidden bg-black">
+                <video src={productVideo} controls className="w-full h-full" />
               </div>
             )}
           </div>
@@ -255,7 +286,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 {addedToCart ? "Added to Cart!" : "Add to Cart"}
               </button>
               <button
-                onClick={() => setWishlisted(!wishlisted)}
+                onClick={() => toggleWishlist(product)}
                 className={`p-3.5 rounded-xl border-2 transition-colors ${
                   wishlisted
                     ? "border-red-400 bg-red-50 text-red-500"
@@ -265,6 +296,16 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 <Heart size={18} className={wishlisted ? "fill-red-500" : ""} />
               </button>
             </div>
+
+            <button
+              onClick={handleSendToWhatsApp}
+              className="flex w-full items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm border-2 border-[#25D366] text-[#128C7E] hover:bg-[#25D366]/10 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91C21.96 6.45 17.5 2 12.04 2zm5.85 14.19c-.25.7-1.45 1.34-2 1.42-.51.08-1.15.11-1.86-.12-.43-.14-.98-.32-1.69-.63-2.97-1.28-4.91-4.28-5.06-4.48-.15-.2-1.21-1.61-1.21-3.07 0-1.46.77-2.18 1.04-2.48.27-.3.6-.37.8-.37.2 0 .4 0 .57.01.18.01.43-.07.67.51.25.6.85 2.08.92 2.23.07.15.12.33.02.53-.1.2-.15.32-.3.49-.15.17-.31.38-.44.51-.15.15-.3.31-.13.61.17.3.76 1.25 1.63 2.03 1.12 1 2.06 1.31 2.36 1.46.3.15.48.13.65-.08.18-.2.75-.87.95-1.17.2-.3.4-.25.67-.15.28.1 1.75.83 2.05.98.3.15.5.22.57.35.08.13.08.75-.17 1.45z"/>
+              </svg>
+              Send Details to Admin on WhatsApp
+            </button>
 
             <Link
               href="/checkout"

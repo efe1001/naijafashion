@@ -32,7 +32,7 @@ const slides = [
     title: "Style Meets",
     accent: "Elegance",
     subtitle: "& Grace",
-    desc: "Curated women's fashion from Ankara to international couture. Express yourself with NaijaFashion.",
+    desc: "Curated women's fashion from Ankara to international couture. Express yourself with iFashion.",
     cta: { label: "Shop Women", href: "/category/women" },
     sub: { label: "New Arrivals", href: "/products?filter=new" },
     bg: "from-purple-950 via-fuchsia-900 to-gray-950",
