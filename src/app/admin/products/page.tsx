@@ -6,6 +6,7 @@ import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, Star, Filter, X, 
 import { products as initialProducts } from "@/data/products";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
+import { uploadFileToR2 } from "@/lib/upload";
 import { useProductVideoStore } from "@/store/productVideoStore";
 
 const CATEGORIES = ["All", "nigerian-traditional", "women", "men", "kids", "accessories", "international"];
@@ -20,6 +21,7 @@ export default function AdminProductsPage() {
   const [videoProduct, setVideoProduct] = useState<Product | null>(null);
   const [videoUrlInput, setVideoUrlInput] = useState("");
   const [videoUploadError, setVideoUploadError] = useState("");
+  const [videoUploading, setVideoUploading] = useState(false);
   const videoFileRef = useRef<HTMLInputElement>(null);
   const { videos, setVideo, removeVideo } = useProductVideoStore();
 
@@ -110,23 +112,28 @@ export default function AdminProductsPage() {
     if (videoFileRef.current) videoFileRef.current.value = "";
   };
 
-  const handleVideoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !videoProduct) return;
     if (!file.type.startsWith("video/")) {
       setVideoUploadError("Please select a video file.");
       return;
     }
-    if (file.size > 15 * 1024 * 1024) {
-      setVideoUploadError("Video is too large — keep uploads under 15MB.");
+    if (file.size > 100 * 1024 * 1024) {
+      setVideoUploadError("Video is too large — keep uploads under 100MB.");
       return;
     }
     setVideoUploadError("");
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") setVideo(videoProduct.id, reader.result);
-    };
-    reader.readAsDataURL(file);
+    setVideoUploading(true);
+    try {
+      const publicUrl = await uploadFileToR2(file, "products");
+      setVideo(videoProduct.id, publicUrl);
+    } catch (err) {
+      setVideoUploadError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+    } finally {
+      setVideoUploading(false);
+      if (videoFileRef.current) videoFileRef.current.value = "";
+    }
   };
 
   const handleSaveVideoUrl = () => {
@@ -384,13 +391,18 @@ export default function AdminProductsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Upload a video file</label>
                 <button
                   onClick={() => videoFileRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-green-400 hover:text-green-700 transition-colors"
+                  disabled={videoUploading}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-green-400 hover:text-green-700 transition-colors disabled:opacity-60"
                 >
-                  <Upload size={15} /> Choose Video File
+                  {videoUploading ? (
+                    <><div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" /> Uploading...</>
+                  ) : (
+                    <><Upload size={15} /> Choose Video File</>
+                  )}
                 </button>
-                <input ref={videoFileRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFile} />
+                <input ref={videoFileRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFile} disabled={videoUploading} />
                 {videoUploadError && <p className="text-red-500 text-xs mt-1">{videoUploadError}</p>}
-                <p className="text-xs text-gray-400 mt-1">Stored in this browser — keep clips short (under 15MB).</p>
+                <p className="text-xs text-gray-400 mt-1">Uploaded to Cloudflare storage — keep clips under 100MB.</p>
               </div>
 
               <div className="flex items-center gap-2">

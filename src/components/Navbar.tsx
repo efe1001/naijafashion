@@ -142,7 +142,7 @@ export default function Navbar() {
               </button>
               <Link
                 href="/wishlist"
-                className="hidden sm:flex relative p-2 text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-full transition-colors"
+                className="flex relative p-2 text-gray-600 hover:text-green-700 hover:bg-green-50 rounded-full transition-colors"
                 aria-label="Wishlist"
               >
                 <Heart size={20} />
@@ -202,8 +202,8 @@ export default function Navbar() {
                     )}
                   </div>
                 ) : (
-                  <Link href="/login" className="hidden sm:flex items-center gap-1.5 bg-green-700 text-white text-sm font-bold px-4 py-2 rounded-xl hover:bg-green-800 transition-colors">
-                    <User size={14} /> Login
+                  <Link href="/login" className="flex items-center gap-1.5 bg-green-700 text-white text-sm font-bold px-3 sm:px-4 py-2 rounded-xl hover:bg-green-800 transition-colors">
+                    <User size={14} /> <span className="hidden sm:inline">Login</span>
                   </Link>
                 )
               )}
