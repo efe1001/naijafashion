@@ -27,9 +27,10 @@ export async function POST(request: NextRequest) {
   }
 
   const passwordHash = await hashPassword(password);
+  const id = crypto.randomUUID();
   const rows = (await sql`
-    INSERT INTO users (name, email, password_hash, phone, address, state)
-    VALUES (${name}, ${email}, ${passwordHash}, ${body?.phone || null}, ${body?.address || null}, ${body?.state || null})
+    INSERT INTO users (id, name, email, password_hash, phone, address, state)
+    VALUES (${id}, ${name}, ${email}, ${passwordHash}, ${body?.phone || null}, ${body?.address || null}, ${body?.state || null})
     RETURNING id, name, email, password_hash, role, phone, address, state, status, created_at, last_login
   `) as unknown as DbUserRow[];
 

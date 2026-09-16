@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
@@ -8,8 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
   address TEXT,
   state TEXT,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  last_login TIMESTAMPTZ
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_login TEXT
 );
 
 CREATE TABLE IF NOT EXISTS products (
@@ -17,31 +17,31 @@ CREATE TABLE IF NOT EXISTS products (
   name TEXT NOT NULL,
   price NUMERIC NOT NULL,
   original_price NUMERIC,
-  images JSONB NOT NULL DEFAULT '[]',
+  images TEXT NOT NULL DEFAULT '[]',
   category TEXT NOT NULL,
   subcategory TEXT NOT NULL DEFAULT '',
   description TEXT NOT NULL DEFAULT '',
-  sizes JSONB NOT NULL DEFAULT '[]',
-  colors JSONB NOT NULL DEFAULT '[]',
-  in_stock BOOLEAN NOT NULL DEFAULT true,
+  sizes TEXT NOT NULL DEFAULT '[]',
+  colors TEXT NOT NULL DEFAULT '[]',
+  in_stock INTEGER NOT NULL DEFAULT 1,
   rating NUMERIC NOT NULL DEFAULT 0,
   review_count INTEGER NOT NULL DEFAULT 0,
   badge TEXT,
   material TEXT,
   origin TEXT NOT NULL DEFAULT 'nigerian',
   video_url TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS orders (
   id TEXT PRIMARY KEY,
-  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
   customer_name TEXT NOT NULL,
   customer_email TEXT NOT NULL,
   phone TEXT NOT NULL DEFAULT '',
   address TEXT NOT NULL DEFAULT '',
   state TEXT NOT NULL DEFAULT '',
-  items JSONB NOT NULL,
+  items TEXT NOT NULL,
   subtotal NUMERIC NOT NULL,
   delivery NUMERIC NOT NULL DEFAULT 0,
   total NUMERIC NOT NULL,
@@ -49,23 +49,23 @@ CREATE TABLE IF NOT EXISTS orders (
   payment_method TEXT,
   payment_ref TEXT,
   note TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS wishlist_items (
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   product_id TEXT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, product_id)
 );
 
 CREATE TABLE IF NOT EXISTS settings (
-  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  id INTEGER PRIMARY KEY CHECK (id = 1),
   whatsapp_number TEXT NOT NULL DEFAULT '+2348012345678',
-  store_info JSONB NOT NULL DEFAULT '{}',
-  notifications JSONB NOT NULL DEFAULT '{}',
-  payment JSONB NOT NULL DEFAULT '{}'
+  store_info TEXT NOT NULL DEFAULT '{}',
+  notifications TEXT NOT NULL DEFAULT '{}',
+  payment TEXT NOT NULL DEFAULT '{}'
 );
 
-INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+INSERT INTO settings (id) VALUES (1) ON CONFLICT DO NOTHING;

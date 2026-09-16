@@ -4,17 +4,26 @@ import { requireAdmin } from "@/lib/auth";
 
 interface DbSettingsRow {
   whatsapp_number: string;
-  store_info: Record<string, unknown>;
-  notifications: Record<string, unknown>;
-  payment: Record<string, unknown>;
+  store_info: Record<string, unknown> | string;
+  notifications: Record<string, unknown> | string;
+  payment: Record<string, unknown> | string;
+}
+
+function parseJsonObject(value: Record<string, unknown> | string): Record<string, unknown> {
+  if (typeof value !== "string") return value ?? {};
+  try {
+    return JSON.parse(value) ?? {};
+  } catch {
+    return {};
+  }
 }
 
 function toApiSettings(row: DbSettingsRow) {
   return {
     whatsappNumber: row.whatsapp_number,
-    storeInfo: row.store_info,
-    notifications: row.notifications,
-    payment: row.payment,
+    storeInfo: parseJsonObject(row.store_info),
+    notifications: parseJsonObject(row.notifications),
+    payment: parseJsonObject(row.payment),
   };
 }
 

@@ -31,9 +31,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
 
-  await sql`UPDATE users SET last_login = now() WHERE id = ${row.id}`;
+  const now = new Date().toISOString();
+  await sql`UPDATE users SET last_login = ${now} WHERE id = ${row.id}`;
 
-  const user = toSafeUser({ ...row, last_login: new Date().toISOString() });
+  const user = toSafeUser({ ...row, last_login: now });
   const token = await signSession({ sub: user.id, email: user.email, role: user.role });
 
   const response = NextResponse.json({ user });

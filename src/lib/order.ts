@@ -16,7 +16,7 @@ export interface DbOrderRow {
   phone: string;
   address: string;
   state: string;
-  items: OrderItem[];
+  items: OrderItem[] | string;
   subtotal: string | number;
   delivery: string | number;
   total: string | number;
@@ -48,6 +48,16 @@ export interface ApiOrder {
   updatedAt: string;
 }
 
+function parseItems(value: OrderItem[] | string): OrderItem[] {
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export function toApiOrder(row: DbOrderRow): ApiOrder {
   return {
     id: row.id,
@@ -57,7 +67,7 @@ export function toApiOrder(row: DbOrderRow): ApiOrder {
     phone: row.phone,
     address: row.address,
     state: row.state,
-    items: row.items,
+    items: parseItems(row.items),
     subtotal: Number(row.subtotal),
     delivery: Number(row.delivery),
     total: Number(row.total),

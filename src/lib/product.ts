@@ -38,19 +38,32 @@ export interface ApiProduct {
   videoUrl?: string;
 }
 
+function parseJsonArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 export function toApiProduct(row: DbProductRow): ApiProduct {
   return {
     id: row.id,
     name: row.name,
     price: Number(row.price),
     originalPrice: row.original_price != null ? Number(row.original_price) : undefined,
-    images: row.images ?? [],
+    images: parseJsonArray(row.images),
     category: row.category,
     subcategory: row.subcategory,
     description: row.description ?? "",
-    sizes: row.sizes ?? [],
-    colors: row.colors ?? [],
-    inStock: row.in_stock,
+    sizes: parseJsonArray(row.sizes),
+    colors: parseJsonArray(row.colors),
+    inStock: Boolean(row.in_stock),
     rating: Number(row.rating),
     reviewCount: row.review_count,
     badge: (row.badge as ApiProduct["badge"]) || undefined,

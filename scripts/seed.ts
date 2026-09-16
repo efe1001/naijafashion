@@ -1,13 +1,13 @@
-import { getDatabase } from "@netlify/database";
+import { getSql } from "../src/lib/db";
 import bcrypt from "bcryptjs";
 import { products } from "../src/data/products";
 
-if (!process.env.NETLIFY_DB_URL) {
-  console.error("Missing NETLIFY_DB_URL env var.");
+if (!process.env.CF_ACCOUNT_ID || !process.env.CF_D1_DATABASE_ID || !process.env.CF_D1_API_TOKEN) {
+  console.error("Missing CF_ACCOUNT_ID / CF_D1_DATABASE_ID / CF_D1_API_TOKEN env vars.");
   process.exit(1);
 }
 
-const sql = getDatabase().sql;
+const sql = getSql();
 
 const DEMO_ACCOUNTS = [
   { name: "iFashion Admin", email: "admin@ifashion.ng", password: "Admin@2025", role: "admin" as const, phone: "+234 801 000 0001", address: "15 Bode Thomas Street, Surulere", state: "Lagos" },
@@ -43,8 +43,8 @@ async function seedUsers() {
     if (rows.length > 0) continue;
     const passwordHash = await bcrypt.hash(u.password, 10);
     await sql`
-      INSERT INTO users (name, email, password_hash, role, phone, address, state)
-      VALUES (${u.name}, ${u.email}, ${passwordHash}, ${u.role}, ${u.phone}, ${u.address}, ${u.state})
+      INSERT INTO users (id, name, email, password_hash, role, phone, address, state)
+      VALUES (${crypto.randomUUID()}, ${u.name}, ${u.email}, ${passwordHash}, ${u.role}, ${u.phone}, ${u.address}, ${u.state})
     `;
     inserted++;
   }

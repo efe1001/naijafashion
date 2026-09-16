@@ -15,7 +15,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
     UPDATE orders SET
       status = COALESCE(${body?.status ?? null}, status),
       note = CASE WHEN ${body?.note !== undefined} THEN ${body?.note || null} ELSE note END,
-      updated_at = now()
+      updated_at = ${new Date().toISOString()}
     WHERE id = ${id}
     RETURNING *
   `) as unknown as DbOrderRow[];
