@@ -32,8 +32,12 @@ export default function ProductCard({ product }: Props) {
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
 
+  const soldOut = product.stock !== undefined && product.stock <= 0;
+  const lowStock = product.stock !== undefined && product.stock > 0 && product.stock <= 5;
+
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (soldOut) return;
     addItem(product, product.sizes[0], product.colors[0]);
   };
 
@@ -74,6 +78,12 @@ export default function ProductCard({ product }: Props) {
           )}
         </div>
 
+        {soldOut && (
+          <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
+            <span className="bg-gray-900 text-white text-xs font-bold px-3 py-1.5 rounded-full">Out of stock</span>
+          </div>
+        )}
+
         {/* Wishlist */}
         <button
           onClick={async (e) => {
@@ -93,7 +103,8 @@ export default function ProductCard({ product }: Props) {
         <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0 duration-200">
           <button
             onClick={handleQuickAdd}
-            className="w-full bg-gray-900/90 backdrop-blur-sm text-white text-xs font-semibold py-2.5 rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+            disabled={soldOut}
+            className="w-full bg-gray-900/90 backdrop-blur-sm text-white text-xs font-semibold py-2.5 rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
           >
             <ShoppingBag size={14} />
             Quick Add
@@ -113,11 +124,14 @@ export default function ProductCard({ product }: Props) {
         </Link>
 
         {/* Rating */}
-        <div className="flex items-center gap-1 mt-1.5">
-          <Star size={12} className="fill-yellow-400 text-yellow-400" />
-          <span className="text-xs font-medium text-gray-700">{product.rating}</span>
-          <span className="text-xs text-gray-400">({product.reviewCount})</span>
-        </div>
+        {product.reviewCount > 0 && (
+          <div className="flex items-center gap-1 mt-1.5">
+            <Star size={12} className="fill-yellow-400 text-yellow-400" />
+            <span className="text-xs font-medium text-gray-700">{product.rating}</span>
+            <span className="text-xs text-gray-400">({product.reviewCount})</span>
+          </div>
+        )}
+        {lowStock && <p className="text-xs font-semibold text-orange-600 mt-1">Only {product.stock} left</p>}
 
         {/* Price */}
         <div className="flex items-center gap-2 mt-2">

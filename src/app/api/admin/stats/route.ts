@@ -33,14 +33,14 @@ export async function GET(request: NextRequest) {
           JOIN products p ON p.id = json_extract(j.value, '$.productId')
           WHERE o.status NOT IN ('cancelled','refunded')
           GROUP BY p.category ORDER BY revenue DESC`,
-      sql`SELECT json_extract(j.value, '$.productId') AS id,
+      sql`SELECT json_extract(j.value, '$.productId') AS pid,
                  MAX(json_extract(j.value, '$.name')) AS name,
                  MAX(json_extract(j.value, '$.image')) AS image,
                  SUM(json_extract(j.value, '$.quantity')) AS units,
                  SUM(json_extract(j.value, '$.price') * json_extract(j.value, '$.quantity')) AS revenue
           FROM orders o, json_each(o.items) j
           WHERE o.status NOT IN ('cancelled','refunded')
-          GROUP BY id ORDER BY units DESC LIMIT 5`,
+          GROUP BY pid ORDER BY units DESC LIMIT 5`,
       sql`SELECT * FROM orders ORDER BY created_at DESC LIMIT 8`,
       sql`SELECT id, name, email, created_at FROM users WHERE role = 'user' ORDER BY created_at DESC LIMIT 5`,
       sql`SELECT r.id, r.rating, r.comment, r.user_name, r.created_at, p.name AS product_name, p.id AS product_id
@@ -79,8 +79,8 @@ export async function GET(request: NextRequest) {
     revenueByCategory: (categoryRows as { category: string; revenue: number }[]).map((r) => ({
       category: r.category, revenue: Number(r.revenue),
     })),
-    topProducts: (topRows as { id: string; name: string; image: string; units: number; revenue: number }[]).map((r) => ({
-      id: r.id, name: r.name, image: r.image, units: Number(r.units), revenue: Number(r.revenue),
+    topProducts: (topRows as { pid: string; name: string; image: string; units: number; revenue: number }[]).map((r) => ({
+      id: r.pid, name: r.name, image: r.image, units: Number(r.units), revenue: Number(r.revenue),
     })),
     recentOrders: (recent as unknown as DbOrderRow[]).map(toApiOrder),
     newUsers,

@@ -4,14 +4,23 @@ import { use } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
-import { categories } from "@/data/products";
+import { useCategories } from "@/lib/useCategories";
 import { useProducts } from "@/lib/useProducts";
 
 export default function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { products } = useProducts();
+  const { categories, loading: categoriesLoading } = useCategories();
   const category = categories.find((c) => c.slug === slug);
   const categoryProducts = products.filter((p) => p.category === slug);
+
+  if (categoriesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-green-200 border-t-green-700 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!category) {
     return (

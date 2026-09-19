@@ -28,9 +28,16 @@ export const useCartStore = create<CartStore>()(
           (item) => item.id === product.id && item.selectedSize === size && item.selectedColor === color
         );
 
+        if (product.stock !== undefined && product.stock <= 0) return;
+
         if (existingIndex > -1) {
           const updated = [...items];
-          updated[existingIndex].quantity += 1;
+          const max = updated[existingIndex].stock;
+          if (max !== undefined && updated[existingIndex].quantity >= max) {
+            set({ isCartOpen: true });
+            return;
+          }
+          updated[existingIndex] = { ...updated[existingIndex], quantity: updated[existingIndex].quantity + 1 };
           set({ items: updated, isCartOpen: true });
         } else {
           set({
@@ -56,7 +63,7 @@ export const useCartStore = create<CartStore>()(
         set({
           items: get().items.map((item) =>
             item.id === id && item.selectedSize === size && item.selectedColor === color
-              ? { ...item, quantity }
+              ? { ...item, quantity: item.stock !== undefined ? Math.min(quantity, item.stock) : quantity }
               : item
           ),
         });

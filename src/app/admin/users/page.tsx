@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import type { ApiOrder } from "@/lib/order";
 import { Search, Plus, Edit2, Trash2, ShieldCheck, User, X, Eye, EyeOff, Ban, CheckCircle } from "lucide-react";
 import { useUsers, AdminUser } from "@/lib/useUsers";
 import { formatPrice, formatDate } from "@/lib/utils";
@@ -12,6 +14,17 @@ export default function AdminUsersPage() {
   const [editUser, setEditUser] = useState<AdminUser | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [viewUser, setViewUser] = useState<AdminUser | null>(null);
+  const [userOrders, setUserOrders] = useState<ApiOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
+  useEffect(() => {
+    if (!viewUser) { setUserOrders([]); return; }
+    setOrdersLoading(true);
+    fetch(`/api/orders?page=1&pageSize=50&userId=${viewUser.id}`)
+      .then((r) => (r.ok ? r.json() : { orders: [] }))
+      .then((d) => setUserOrders(d.orders ?? []))
+      .finally(() => setOrdersLoading(false));
+  }, [viewUser]);
   const [showPass, setShowPass] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
@@ -305,6 +318,27 @@ export default function AdminUsersPage() {
                 </>
               )}
             </div>
+            {viewUser.role === "user" && (
+              <div className="px-6 pb-6">
+                <h4 className="font-bold text-gray-900 text-sm mb-2">Order history</h4>
+                {ordersLoading && <p className="text-xs text-gray-400">Loading...</p>}
+                {!ordersLoading && userOrders.length === 0 && <p className="text-xs text-gray-400">No orders yet.</p>}
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {userOrders.map((o) => (
+                    <Link key={o.id} href={`/admin/orders?q=${o.id}`} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl hover:bg-green-50 transition-colors">
+                      <div className="min-w-0">
+                        <p className="font-mono text-xs font-bold text-gray-800 truncate">{o.id}</p>
+                        <p className="text-xs text-gray-400">{formatDate(o.createdAt)} · {o.items.length} item{o.items.length > 1 ? "s" : ""}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-gray-900">{formatPrice(o.total)}</p>
+                        <p className="text-xs text-gray-500 capitalize">{o.status}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

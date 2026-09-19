@@ -11,6 +11,7 @@ import { useSettingsStore } from "@/store/settingsStore";
 import { useProduct, useProducts } from "@/lib/useProducts";
 import { formatPrice, buildWhatsAppLink } from "@/lib/utils";
 import ProductCard from "@/components/ProductCard";
+import ReviewsSection from "@/components/ReviewsSection";
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -60,6 +61,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
     : 0;
 
   const wishlisted = isWishlisted(product.id);
+  const soldOut = product.stock !== undefined && product.stock <= 0;
+  const maxQty = product.stock ?? 20;
 
   const handleToggleWishlist = async () => {
     const result = await toggleWishlist(product);
@@ -67,6 +70,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   };
 
   const handleAddToCart = () => {
+    if (soldOut) return;
     if (!selectedSize) { setSizeError(true); return; }
     if (!selectedColor) { setColorError(true); return; }
 
@@ -176,19 +180,28 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             </div>
 
             {/* Rating */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                {[1,2,3,4,5].map((s) => (
-                  <Star
-                    key={s}
-                    size={16}
-                    className={s <= Math.round(product.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}
-                  />
-                ))}
+            {product.reviewCount > 0 && (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  {[1,2,3,4,5].map((s) => (
+                    <Star
+                      key={s}
+                      size={16}
+                      className={s <= Math.round(product.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-200"}
+                    />
+                  ))}
+                </div>
+                <span className="font-semibold text-sm text-gray-700">{product.rating}</span>
+                <span className="text-sm text-gray-400">({product.reviewCount} reviews)</span>
               </div>
-              <span className="font-semibold text-sm text-gray-700">{product.rating}</span>
-              <span className="text-sm text-gray-400">({product.reviewCount} reviews)</span>
-            </div>
+            )}
+
+            {/* Stock */}
+            {soldOut ? (
+              <p className="text-sm font-bold text-red-600">Out of stock</p>
+            ) : (
+              maxQty <= 5 && <p className="text-sm font-semibold text-orange-600">Only {maxQty} left in stock</p>
+            )}
 
             {/* Price */}
             <div className="flex items-baseline gap-3">
@@ -275,7 +288,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 </button>
                 <span className="w-10 text-center font-semibold text-gray-900">{quantity}</span>
                 <button
-                  onClick={() => setQuantity(quantity + 1)}
+                  onClick={() => setQuantity(Math.min(maxQty, quantity + 1))}
                   className="p-2.5 hover:text-green-700 transition-colors"
                 >
                   <Plus size={16} />
@@ -287,6 +300,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <div className="flex gap-3 pt-2">
               <button
                 onClick={handleAddToCart}
+                disabled={soldOut}
                 className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold text-sm transition-all ${
                   addedToCart
                     ? "bg-green-500 text-white"
@@ -321,11 +335,12 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <Link
               href="/checkout"
               onClick={() => {
-                if (selectedSize && selectedColor) {
+                if (selectedSize && selectedColor && !soldOut) {
                   addItem(product, selectedSize, selectedColor);
                 }
               }}
-              className="block w-full text-center py-3.5 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl transition-colors shadow-lg shadow-green-200"
+              aria-disabled={soldOut}
+              className={`${soldOut ? "pointer-events-none opacity-50 " : ""}block w-full text-center py-3.5 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl transition-colors shadow-lg shadow-green-200`}
             >
               Buy Now — {formatPrice(product.price * quantity)}
             </Link>
@@ -351,6 +366,8 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             </div>
           </div>
         </div>
+
+        <ReviewsSection productId={product.id} />
 
         {/* Related */}
         {related.length > 0 && (

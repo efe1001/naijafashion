@@ -12,9 +12,10 @@ import HeroSlider from "@/components/home/HeroSlider";
 import FlashSaleTimer from "@/components/home/FlashSaleTimer";
 import ProductTabs from "@/components/home/ProductTabs";
 import MarqueeStrip from "@/components/home/MarqueeStrip";
-import { categories } from "@/data/products";
 import { useProducts } from "@/lib/useProducts";
-import { useMemo } from "react";
+import { useCategories } from "@/lib/useCategories";
+import { useMemo, useEffect, useState } from "react";
+import type { Product } from "@/types";
 
 const testimonials = [
   { name: "Adaeze Okonkwo", location: "Lagos", avatar: "AO", avatarBg: "bg-green-600", rating: 5, verified: true, text: "I ordered a George wrapper set for my sister's wedding and it arrived the next day! The quality is amazing. iFashion is my go-to!", product: "George Wrapper Set" },
@@ -36,15 +37,27 @@ const fadeUp = { hidden: { opacity: 0, y: 40 }, show: { opacity: 1, y: 0 } };
 const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.1 } } };
 
 export default function HomePage() {
-  const { products } = useProducts();
+  const { products, loading: productsLoading } = useProducts();
+  const { categories } = useCategories();
+  const [popular, setPopular] = useState<Product[]>([]);
 
-  const nigerianPicks = useMemo(() => [
-    ...products.filter(p => p.category === "men"),
-    ...products.filter(p => p.category === "nigerian-traditional" && ["agbada","senator","babban-riga"].includes(p.subcategory)),
-  ].slice(0, 12), [products]);
+  useEffect(() => {
+    fetch("/api/products/popular?limit=4")
+      .then((r) => r.json())
+      .then((d) => setPopular(d.products ?? []))
+      .catch(() => setPopular([]));
+  }, []);
+
+  const nigerianPicks = useMemo(() => {
+    const picks = [
+      ...products.filter(p => p.category === "men"),
+      ...products.filter(p => p.category === "nigerian-traditional" && ["agbada","senator","babban-riga"].includes(p.subcategory)),
+    ].slice(0, 12);
+    return picks.length > 0 ? picks : products.slice(0, 12);
+  }, [products]);
 
   const newArrivals = useMemo(() => products.filter(p => p.badge === "New").slice(0, 4), [products]);
-  const bestSellers = useMemo(() => [...products].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 4), [products]);
+  const bestSellers = popular;
 
   return (
     <div className="bg-white overflow-x-hidden">
@@ -77,7 +90,7 @@ export default function HomePage() {
               <motion.div key={cat.id} variants={fadeUp} custom={i}>
                 <Link href={`/category/${cat.slug}`}
                   className="group relative rounded-2xl overflow-hidden aspect-square shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 block">
-                  <Image src={cat.image} alt={cat.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="16vw" />
+                  <Image src={cat.image || "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=800&q=80"} alt={cat.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" sizes="16vw" />
                   <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent group-hover:from-green-900/80 transition-colors duration-300" />
                   <div className="absolute bottom-0 left-0 right-0 p-3">
                     <p className="text-white font-bold text-sm leading-tight">{cat.name}</p>
@@ -111,6 +124,9 @@ export default function HomePage() {
 
           <motion.div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-5"
             variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
+            {productsLoading && nigerianPicks.length === 0 && Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="aspect-[3/4] rounded-2xl bg-gray-100 animate-pulse" />
+            ))}
             {nigerianPicks.map((p, i) => (
               <motion.div key={p.id} variants={fadeUp} custom={i}>
                 <ProductCard product={p} />
@@ -199,10 +215,10 @@ export default function HomePage() {
                         <p className="font-bold text-gray-900 text-sm line-clamp-1 group-hover:text-green-700 transition-colors">{p.name}</p>
                         <p className="text-xs text-gray-500 mt-0.5 capitalize">{p.category.replace(/-/g," ")}</p>
                         <div className="flex items-center gap-1 mt-1.5">
-                          {Array.from({ length: 5 }).map((_, j) => (
+                          {p.reviewCount > 0 && Array.from({ length: 5 }).map((_, j) => (
                             <Star key={j} size={10} fill={j < Math.floor(p.rating) ? "#f59e0b" : "none"} className={j < Math.floor(p.rating) ? "text-yellow-400" : "text-gray-200"} />
                           ))}
-                          <span className="text-xs text-gray-400 ml-1">({p.reviewCount})</span>
+                          {p.reviewCount > 0 ? <span className="text-xs text-gray-400 ml-1">({p.reviewCount})</span> : <span className="text-xs text-gray-400">New</span>}
                         </div>
                         <p className="font-extrabold text-green-700 mt-1.5 text-sm">₦{p.price.toLocaleString()}</p>
                       </div>

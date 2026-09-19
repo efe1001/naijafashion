@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
-import { categories } from "@/data/products";
+import { useCategories } from "@/lib/useCategories";
 import { useProducts } from "@/lib/useProducts";
 import { SortOption } from "@/types";
 
@@ -17,14 +17,33 @@ const sortOptions: { label: string; value: SortOption }[] = [
 
 export default function ProductsPage() {
   const { products } = useProducts();
+  const { categories } = useCategories();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedOrigin, setSelectedOrigin] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("featured");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [saleOnly, setSaleOnly] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setSearchQuery(params.get("search") ?? "");
+    setSaleOnly(params.get("filter") === "sale");
+  }, []);
 
   const filtered = useMemo(() => {
     let result = [...products];
+
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      result = result.filter((p) =>
+        [p.name, p.subcategory, p.category, p.description, p.material ?? ""].some((f) => f.toLowerCase().includes(q))
+      );
+    }
+    if (saleOnly) {
+      result = result.filter((p) => p.originalPrice && p.originalPrice > p.price);
+    }
 
     if (selectedCategory !== "all") {
       result = result.filter((p) => p.category === selectedCategory);
@@ -52,7 +71,7 @@ export default function ProductsPage() {
     }
 
     return result;
-  }, [products, selectedCategory, selectedOrigin, sortBy, priceRange]);
+  }, [products, selectedCategory, selectedOrigin, sortBy, priceRange, searchQuery, saleOnly]);
 
   const activeFilterCount = [
     selectedCategory !== "all",
@@ -71,7 +90,14 @@ export default function ProductsPage() {
       {/* Header */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <h1 className="text-3xl font-extrabold text-gray-900">All Products</h1>
+          <h1 className="text-3xl font-extrabold text-gray-900">
+            {searchQuery ? `Results for "${searchQuery}"` : saleOnly ? "Sale" : "All Products"}
+          </h1>
+          {(searchQuery || saleOnly) && (
+            <button onClick={() => { setSearchQuery(""); setSaleOnly(false); window.history.replaceState(null, "", "/products"); }} className="mt-2 text-sm text-green-700 font-semibold hover:underline">
+              Clear search
+            </button>
+          )}
           <p className="text-gray-500 mt-1">
             {filtered.length} {filtered.length === 1 ? "product" : "products"} found
           </p>

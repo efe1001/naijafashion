@@ -42,7 +42,10 @@ export async function GET(request: NextRequest) {
         AND (${userId} = '' OR user_id = ${userId})
     `) as unknown as { n: number }[];
 
+    const statusRows = (await sql`SELECT status, COUNT(*) AS n FROM orders GROUP BY status`) as unknown as { status: string; n: number }[];
+
     return NextResponse.json({
+      statusCounts: Object.fromEntries(statusRows.map((r) => [r.status, Number(r.n)])),
       orders: rows.map(toApiOrder),
       total: Number(counted[0]?.n ?? 0),
       page,

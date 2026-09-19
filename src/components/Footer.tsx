@@ -92,7 +92,7 @@ export default function Footer() {
             <h4 className="text-white font-semibold mb-4">Help & Info</h4>
             <ul className="space-y-2.5 text-sm">
               {[
-                ["Track My Order", "/track-order"],
+                ["Track My Order", "/track"],
                 ["Returns & Exchanges", "/returns"],
                 ["Size Guide", "/size-guide"],
                 ["FAQ", "/faq"],

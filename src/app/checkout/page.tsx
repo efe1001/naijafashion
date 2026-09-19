@@ -9,6 +9,7 @@ import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import { formatPrice, generateOrderId } from "@/lib/utils";
 import { nigerianStates } from "@/data/products";
+import { useDelivery } from "@/lib/useDelivery";
 
 declare global {
   interface Window {
@@ -68,18 +69,22 @@ export default function CheckoutPage() {
   const { items, getTotalPrice, clearCart } = useCartStore();
   const { currentUser } = useAuthStore();
   const total = getTotalPrice();
-  const delivery = total >= 50000 ? 0 : 3500;
-  const grandTotal = total + delivery;
-
-  useMonnifyScript();
-  usePaystackScript();
-
   const [gateway, setGateway] = useState<Gateway>("paystack");
-  const [payError, setPayError] = useState("");
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "",
     address: "", city: "", state: "",
   });
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const { delivery } = useDelivery(total, form.state);
+  const discount = gateway === "paystack" && coupon ? Math.min(coupon.discount, total) : 0;
+  const grandTotal = total - discount + delivery;
+
+  useMonnifyScript();
+  usePaystackScript();
+
+  const [payError, setPayError] = useState("");
   const [usedSavedAddress, setUsedSavedAddress] = useState(false);
   const [payMethod, setPayMethod] = useState<MonnifyPayMethod>("CARD");
   const [processing, setProcessing] = useState(false);
@@ -116,6 +121,23 @@ export default function CheckoutPage() {
     setErrors({ ...errors, [e.target.name]: "" });
   };
 
+  const applyCoupon = async () => {
+    setCouponError("");
+    if (!couponInput.trim()) return;
+    const res = await fetch("/api/coupons/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: couponInput, subtotal: total }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setCoupon(null);
+      setCouponError(data.error || "Invalid coupon");
+      return;
+    }
+    setCoupon({ code: data.code, discount: data.discount });
+  };
+
   const handlePaystack = async () => {
     setPayError("");
     if (!window.PaystackPop) {
@@ -133,6 +155,7 @@ export default function CheckoutPage() {
           phone: form.phone,
           address: `${form.address}, ${form.city}`,
           state: form.state,
+          couponCode: coupon?.code,
           items: items.map((item) => ({
             id: item.id,
             quantity: item.quantity,
@@ -498,11 +521,32 @@ export default function CheckoutPage() {
                     {delivery === 0 ? "FREE" : formatPrice(delivery)}
                   </span>
                 </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-700">
+                    <span>Discount ({coupon?.code})</span><span className="font-medium">-{formatPrice(discount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-extrabold text-gray-900 text-lg pt-2 border-t border-gray-100">
                   <span>Total</span>
                   <span className="text-green-700">{formatPrice(grandTotal)}</span>
                 </div>
               </div>
+
+              {gateway === "paystack" && (
+                <div>
+                  <div className="flex gap-2">
+                    <input
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Coupon code"
+                      className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm uppercase focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    <button onClick={applyCoupon} type="button" className="px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition-colors">Apply</button>
+                  </div>
+                  {couponError && <p className="text-red-500 text-xs mt-1">{couponError}</p>}
+                  {coupon && <p className="text-green-700 text-xs mt-1">Coupon {coupon.code} applied.</p>}
+                </div>
+              )}
 
               {payError && <p className="text-red-500 text-sm bg-red-50 border border-red-100 rounded-xl px-3 py-2">{payError}</p>}
 

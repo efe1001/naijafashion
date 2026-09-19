@@ -4,19 +4,21 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Settings, LogOut,
-  Tag, BarChart2, Bell, ChevronRight, Menu, X,
+  Tag, BarChart2, Bell, ChevronRight, Menu, X, Ticket, History,
 } from "lucide-react";
 import { useAuthStore } from "@/store/authStore";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
-  { icon: ShoppingCart, label: "Orders", href: "/admin/orders", badge: "6" },
+  { icon: ShoppingCart, label: "Orders", href: "/admin/orders", badgeKey: "pending" },
   { icon: Package, label: "Products", href: "/admin/products" },
   { icon: Users, label: "Users", href: "/admin/users" },
   { icon: Tag, label: "Categories", href: "/admin/categories" },
   { icon: BarChart2, label: "Analytics", href: "/admin/analytics" },
-  { icon: Bell, label: "Notifications", href: "/admin/notifications", badge: "3" },
+  { icon: Ticket, label: "Coupons", href: "/admin/coupons" },
+  { icon: Bell, label: "Notifications", href: "/admin/notifications" },
+  { icon: History, label: "Activity Log", href: "/admin/activity" },
   { icon: Settings, label: "Settings", href: "/admin/settings" },
 ];
 
@@ -25,6 +27,14 @@ export default function AdminSidebar() {
   const router = useRouter();
   const { currentUser, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [pending, setPending] = useState(0);
+
+  useEffect(() => {
+    fetch("/api/orders?page=1&pageSize=1&status=pending")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setPending(d?.total ?? 0))
+      .catch(() => setPending(0));
+  }, [pathname]);
 
   const handleLogout = () => {
     logout();
@@ -64,7 +74,8 @@ export default function AdminSidebar() {
         <p className="text-gray-500 text-xs font-semibold uppercase tracking-wider px-3 py-2">
           Main Menu
         </p>
-        {navItems.map(({ icon: Icon, label, href, badge }) => {
+        {navItems.map(({ icon: Icon, label, href, badgeKey }) => {
+          const badge = badgeKey === "pending" && pending > 0 ? String(pending) : null;
           const active = pathname === href || (href !== "/admin" && pathname.startsWith(href));
           return (
             <Link

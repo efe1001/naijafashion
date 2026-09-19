@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Save, Store, Bell, Shield, Truck, CreditCard, CheckCircle2, MessageCircle, Zap, ToggleLeft, ToggleRight } from "lucide-react";
 import { useSettingsStore } from "@/store/settingsStore";
+import { nigerianStates } from "@/data/products";
 
 export default function AdminSettingsPage() {
   const {
@@ -11,6 +12,7 @@ export default function AdminSettingsPage() {
     notifications: savedNotifications,
     payment: savedPayment,
     flashSale: savedFlashSale,
+    stateFees: savedStateFees,
     saveSettings,
   } = useSettingsStore();
 
@@ -21,6 +23,7 @@ export default function AdminSettingsPage() {
   const [notifications, setNotifications] = useState(savedNotifications);
   const [payment, setPayment] = useState(savedPayment);
   const [flashSale, setFlashSale] = useState(savedFlashSale);
+  const [stateFees, setStateFees] = useState<Record<string, string>>(savedStateFees);
 
   // Sync local drafts once settings finish loading from the server
   useEffect(() => { setWhatsappNumber(savedWhatsapp); }, [savedWhatsapp]);
@@ -28,11 +31,12 @@ export default function AdminSettingsPage() {
   useEffect(() => { setNotifications(savedNotifications); }, [savedNotifications]);
   useEffect(() => { setPayment(savedPayment); }, [savedPayment]);
   useEffect(() => { setFlashSale(savedFlashSale); }, [savedFlashSale]);
+  useEffect(() => { setStateFees(savedStateFees); }, [savedStateFees]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveSettings({ whatsappNumber, storeInfo: store, notifications, payment, flashSale });
+      await saveSettings({ whatsappNumber, storeInfo: store, notifications, payment, flashSale, stateFees });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } finally {
@@ -121,6 +125,35 @@ export default function AdminSettingsPage() {
               />
               <p className="text-xs text-gray-400 mt-1">Leave empty to count down to midnight tonight. The banner hides itself when the time runs out.</p>
             </div>
+          </div>
+          <p className="text-xs text-gray-400">Remember to press Save Changes at the top.</p>
+        </div>
+
+        {/* Delivery fee by state */}
+        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
+          <div className="flex items-center gap-2">
+            <Truck size={18} className="text-green-700" />
+            <div>
+              <h2 className="font-bold text-gray-900">Delivery Fee by State</h2>
+              <p className="text-xs text-gray-400">
+                Leave a state blank to use the standard fee (₦{Number(store.deliveryFee || 0).toLocaleString()}). Orders above the free-delivery threshold stay free. Enter 0 for free delivery to a state.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {nigerianStates.map((state) => (
+              <label key={state} className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-gray-600">{state}</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={stateFees[state] ?? ""}
+                  onChange={(e) => setStateFees((prev) => ({ ...prev, [state]: e.target.value }))}
+                  placeholder={store.deliveryFee}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </label>
+            ))}
           </div>
           <p className="text-xs text-gray-400">Remember to press Save Changes at the top.</p>
         </div>

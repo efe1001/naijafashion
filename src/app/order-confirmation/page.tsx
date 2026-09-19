@@ -96,6 +96,12 @@ function OrderContent() {
             {/* Actions */}
             <div className="flex flex-col gap-3 pt-2">
               <Link
+                href={`/track?orderId=${orderId}`}
+                className="w-full text-center bg-gray-900 hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                Track this order
+              </Link>
+              <Link
                 href="/products"
                 className="w-full text-center bg-green-700 hover:bg-green-800 text-white font-bold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg shadow-green-200"
               >

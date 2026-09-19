@@ -42,6 +42,7 @@ export interface FlashSale {
 
 interface SettingsPayload {
   flashSale?: FlashSale;
+  stateFees?: Record<string, string>;
   whatsappNumber?: string;
   storeInfo?: StoreInfo;
   notifications?: NotificationPrefs;
@@ -91,6 +92,7 @@ export const useSettingsStore = create<SettingsStore>()((set) => ({
   whatsappNumber: "+2348012345678",
   storeInfo: DEFAULT_STORE_INFO,
   flashSale: DEFAULT_FLASH_SALE,
+  stateFees: {},
   notifications: DEFAULT_NOTIFICATIONS,
   payment: DEFAULT_PAYMENT,
   loaded: false,
@@ -103,6 +105,7 @@ export const useSettingsStore = create<SettingsStore>()((set) => ({
         whatsappNumber: data.whatsappNumber ?? "+2348012345678",
         storeInfo: { ...DEFAULT_STORE_INFO, ...data.storeInfo },
         flashSale: { ...DEFAULT_FLASH_SALE, ...data.flashSale },
+        stateFees: data.stateFees ?? {},
         notifications: { ...DEFAULT_NOTIFICATIONS, ...data.notifications },
         payment: { ...DEFAULT_PAYMENT, ...data.payment },
         loaded: true,
@@ -124,6 +127,7 @@ export const useSettingsStore = create<SettingsStore>()((set) => ({
       whatsappNumber: data.whatsappNumber,
       storeInfo: { ...DEFAULT_STORE_INFO, ...data.storeInfo },
       flashSale: { ...DEFAULT_FLASH_SALE, ...data.flashSale },
+        stateFees: data.stateFees ?? {},
       notifications: { ...DEFAULT_NOTIFICATIONS, ...data.notifications },
       payment: { ...DEFAULT_PAYMENT, ...data.payment },
     });

@@ -1,8 +1,6 @@
 "use client";
 
-import { useOrders } from "@/lib/useOrders";
-import { useProducts } from "@/lib/useProducts";
-import { useUsers } from "@/lib/useUsers";
+import { useAdminStats } from "@/lib/useAdminStats";
 import { formatPrice, formatDate } from "@/lib/utils";
 import Link from "next/link";
 import {
@@ -28,45 +26,36 @@ const statusIcon: Record<string, React.ReactNode> = {
 };
 
 export default function AdminDashboard() {
-  const { orders: sampleOrders } = useOrders();
-  const { products } = useProducts();
-  const { users } = useUsers();
+  const { stats: data, loading, error } = useAdminStats();
 
-  const totalRevenue = sampleOrders.filter(o => o.status !== "cancelled" && o.status !== "refunded").reduce((s, o) => s + o.total, 0);
-  const totalOrders = sampleOrders.length;
-  const totalUsers = users.filter(u => u.role === "user").length;
-  const totalProducts = products.length;
-  const pendingOrders = sampleOrders.filter(o => o.status === "pending").length;
-  const lowStockProducts = products.filter(p => !p.inStock).length;
+  if (loading) {
+    return (
+      <div className="p-8 flex justify-center">
+        <div className="w-10 h-10 border-4 border-green-200 border-t-green-700 rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (!data) {
+    return <div className="p-8 text-red-600">{error || "No data"}</div>;
+  }
 
-  const recentOrders = [...sampleOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
-
-  const monthlyRevenue = [
-    { month: "Jan", value: 280000 },
-    { month: "Feb", value: 420000 },
-    { month: "Mar", value: 310000 },
-    { month: "Apr", value: 550000 },
-    { month: "May", value: 480000 },
-    { month: "Jun", value: totalRevenue },
-  ];
-  const maxRevenue = Math.max(...monthlyRevenue.map(m => m.value));
-
-  const topProducts = [...products].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 5);
+  const { totals, monthlyRevenue, topProducts, lowStock } = data;
+  const recentOrders = data.recentOrders.slice(0, 5);
+  const maxRevenue = Math.max(...monthlyRevenue.map((m) => m.value), 1);
 
   const stats = [
-    { label: "Total Revenue", value: formatPrice(totalRevenue), icon: TrendingUp, color: "bg-green-500", change: "+18.2%", up: true },
-    { label: "Total Orders", value: totalOrders, icon: ShoppingBag, color: "bg-blue-500", change: "+12.5%", up: true },
-    { label: "Total Users", value: totalUsers, icon: Users, color: "bg-purple-500", change: "+8.3%", up: true },
-    { label: "Products", value: totalProducts, icon: Package, color: "bg-orange-500", change: "+5 this month", up: true },
+    { label: "Total Revenue", value: formatPrice(totals.revenue), icon: TrendingUp, color: "bg-green-500", note: "excl. cancelled & refunded" },
+    { label: "Total Orders", value: totals.orders, icon: ShoppingBag, color: "bg-blue-500", note: `${totals.pending} pending` },
+    { label: "Customers", value: totals.customers, icon: Users, color: "bg-purple-500", note: "registered accounts" },
+    { label: "Products", value: totals.products, icon: Package, color: "bg-orange-500", note: `${totals.activeProducts} live` },
   ];
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Welcome back, Admin. Here&apos;s what&apos;s happening.</p>
+          <p className="text-gray-500 text-sm mt-0.5">Live figures from your store.</p>
         </div>
         <div className="flex items-center gap-2 text-sm text-gray-500 bg-white border border-gray-200 rounded-xl px-4 py-2">
           <Clock size={14} />
@@ -74,38 +63,33 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Alerts */}
-      {(pendingOrders > 0 || lowStockProducts > 0) && (
+      {(totals.pending > 0 || lowStock.length > 0) && (
         <div className="flex flex-wrap gap-3">
-          {pendingOrders > 0 && (
+          {totals.pending > 0 && (
             <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2.5 rounded-xl text-sm font-medium">
               <AlertTriangle size={15} className="text-yellow-500" />
-              {pendingOrders} order{pendingOrders > 1 ? "s" : ""} awaiting confirmation
-              <Link href="/admin/orders" className="underline ml-1">View</Link>
+              {totals.pending} order{totals.pending > 1 ? "s" : ""} awaiting confirmation
+              <Link href="/admin/orders?status=pending" className="underline ml-1">View</Link>
             </div>
           )}
-          {lowStockProducts > 0 && (
+          {lowStock.length > 0 && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-xl text-sm font-medium">
               <AlertTriangle size={15} className="text-red-500" />
-              {lowStockProducts} product{lowStockProducts > 1 ? "s" : ""} out of stock
-              <Link href="/admin/products" className="underline ml-1">Fix</Link>
+              {lowStock.length} product{lowStock.length > 1 ? "s" : ""} low or out of stock
+              <Link href="/admin/products" className="underline ml-1">Restock</Link>
             </div>
           )}
         </div>
       )}
 
-      {/* Stats cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {stats.map(({ label, value, icon: Icon, color, change, up }) => (
+        {stats.map(({ label, value, icon: Icon, color, note }) => (
           <div key={label} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-4">
               <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center`}>
                 <Icon size={18} className="text-white" />
               </div>
-              <span className={`text-xs font-semibold flex items-center gap-0.5 ${up ? "text-green-600" : "text-red-500"}`}>
-                <ArrowUpRight size={12} />
-                {change}
-              </span>
+              <span className="text-xs font-medium text-gray-400 text-right">{note}</span>
             </div>
             <p className="text-2xl font-extrabold text-gray-900">{value}</p>
             <p className="text-sm text-gray-500 mt-0.5">{label}</p>
@@ -114,22 +98,21 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Revenue chart */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="font-bold text-gray-900">Revenue Overview</h3>
-              <p className="text-sm text-gray-500 mt-0.5">Monthly revenue for 2025</p>
+              <p className="text-sm text-gray-500 mt-0.5">Revenue for the last 6 months</p>
             </div>
-            <span className="text-xs bg-green-50 text-green-700 font-semibold px-3 py-1 rounded-full">This Year</span>
+            <span className="text-xs bg-green-50 text-green-700 font-semibold px-3 py-1 rounded-full">Last 6 months</span>
           </div>
           <div className="flex items-end gap-3 h-40">
             {monthlyRevenue.map((m) => (
-              <div key={m.month} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-xs text-gray-500 font-medium">{formatPrice(m.value).replace("₦", "").replace(",000", "k")}</span>
+              <div key={m.month} className="flex-1 flex flex-col items-center justify-end gap-1 h-full">
+                <span className="text-xs text-gray-500 font-medium">{m.value >= 1000 ? `${Math.round(m.value / 1000)}k` : m.value}</span>
                 <div
-                  className="w-full bg-linear-to-t from-green-600 to-green-400 rounded-t-lg transition-all hover:from-green-700 hover:to-green-500 cursor-pointer"
-                  style={{ height: `${(m.value / maxRevenue) * 100}%`, minHeight: "8px" }}
+                  className="w-full bg-linear-to-t from-green-600 to-green-400 rounded-t-lg transition-all hover:from-green-700 hover:to-green-500"
+                  style={{ height: `${(m.value / maxRevenue) * 80}%`, minHeight: "6px" }}
                 />
                 <span className="text-xs text-gray-500 font-medium">{m.month}</span>
               </div>
@@ -137,13 +120,12 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Order status breakdown */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h3 className="font-bold text-gray-900 mb-5">Order Status</h3>
           <div className="space-y-3">
             {(["delivered", "shipped", "processing", "pending", "cancelled"] as const).map((status) => {
-              const count = sampleOrders.filter(o => o.status === status).length;
-              const pct = Math.round((count / sampleOrders.length) * 100);
+              const count = data.statusCounts[status] ?? 0;
+              const pct = totals.orders ? Math.round((count / totals.orders) * 100) : 0;
               return (
                 <div key={status}>
                   <div className="flex items-center justify-between mb-1">
@@ -172,7 +154,6 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Recent orders */}
         <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
             <h3 className="font-bold text-gray-900">Recent Orders</h3>
@@ -181,6 +162,7 @@ export default function AdminDashboard() {
             </Link>
           </div>
           <div className="divide-y divide-gray-50">
+            {recentOrders.length === 0 && <p className="px-6 py-8 text-sm text-gray-400 text-center">No orders yet.</p>}
             {recentOrders.map((order) => (
               <div key={order.id} className="flex items-center gap-4 px-6 py-3.5 hover:bg-gray-50 transition-colors">
                 <div className="min-w-0 flex-1">
@@ -192,7 +174,7 @@ export default function AdminDashboard() {
                 </span>
                 <p className="font-bold text-gray-900 text-sm">{formatPrice(order.total)}</p>
                 <p className="text-xs text-gray-400 hidden sm:block">{formatDate(order.createdAt)}</p>
-                <Link href="/admin/orders" className="text-green-600 hover:text-green-800">
+                <Link href={`/admin/orders?q=${order.id}`} className="text-green-600 hover:text-green-800">
                   <ArrowUpRight size={16} />
                 </Link>
               </div>
@@ -200,36 +182,29 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Top products */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h3 className="font-bold text-gray-900">Top Products</h3>
+            <h3 className="font-bold text-gray-900">Top Selling Products</h3>
             <Link href="/admin/products" className="text-sm text-green-700 font-semibold flex items-center gap-1">
               All <ArrowUpRight size={14} />
             </Link>
           </div>
           <div className="divide-y divide-gray-50">
+            {topProducts.length === 0 && <p className="px-5 py-8 text-sm text-gray-400 text-center">No sales yet.</p>}
             {topProducts.map((p, i) => (
               <div key={p.id} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors">
                 <span className="w-5 text-xs text-gray-400 font-bold">#{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-gray-900 truncate">{p.name}</p>
-                  <p className="text-xs text-gray-400">{p.reviewCount} reviews</p>
+                  <p className="text-xs text-gray-400">{p.units} sold</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-gray-900">{formatPrice(p.price)}</p>
-                  <div className="flex items-center gap-0.5 justify-end">
-                    <span className="text-yellow-400 text-xs">★</span>
-                    <span className="text-xs text-gray-500">{p.rating}</span>
-                  </div>
-                </div>
+                <p className="text-sm font-bold text-gray-900">{formatPrice(p.revenue)}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Quick actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Add Product", href: "/admin/products", color: "bg-green-600 hover:bg-green-700", icon: Package },

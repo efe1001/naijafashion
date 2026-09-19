@@ -204,6 +204,7 @@ export default function ProfilePage() {
                         <div>
                           <p className="font-mono text-xs font-bold text-gray-700">{order.id}</p>
                           <p className="text-xs text-gray-400">{formatDate(order.createdAt)}</p>
+                          <a href={`/track?orderId=${order.id}`} className="text-xs text-green-700 font-semibold hover:underline">Track order</a>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className={`text-xs px-2.5 py-1 rounded-full font-semibold capitalize ${statusColors[order.status]}`}>{order.status}</span>

@@ -7,12 +7,13 @@ import { useCartStore } from "@/store/cartStore";
 import { formatPrice } from "@/lib/utils";
 import ProductCard from "@/components/ProductCard";
 import { useProducts } from "@/lib/useProducts";
+import { useDelivery } from "@/lib/useDelivery";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, getTotalPrice, clearCart } = useCartStore();
   const { products } = useProducts();
   const total = getTotalPrice();
-  const delivery = total >= 50000 ? 0 : 3500;
+  const { delivery, settings: deliverySettings } = useDelivery(total, "");
   const grandTotal = total + delivery;
 
   const suggested = products.filter((p) => !items.find((i) => i.id === p.id)).slice(0, 4);
@@ -178,9 +179,9 @@ export default function CartPage() {
                       {delivery === 0 ? "FREE" : formatPrice(delivery)}
                     </span>
                   </div>
-                  {delivery > 0 && (
+                  {delivery > 0 && deliverySettings.freeDeliveryThreshold > 0 && (
                     <p className="text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-lg">
-                      Add {formatPrice(50000 - total)} more for free delivery!
+                      Add {formatPrice(Math.max(0, deliverySettings.freeDeliveryThreshold - total))} more for free delivery! Exact fee depends on your state.
                     </p>
                   )}
                 </div>

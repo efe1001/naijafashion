@@ -7,6 +7,7 @@ import { ShoppingBag, Search, Menu, X, Heart, ChevronDown, User, LogOut, ShieldC
 import { useCartStore } from "@/store/cartStore";
 import { useAuthStore } from "@/store/authStore";
 import { useWishlistStore } from "@/store/wishlistStore";
+import SearchBar from "@/components/SearchBar";
 
 const navLinks = [
   {
@@ -218,22 +219,7 @@ export default function Navbar() {
           </div>
 
           {/* Search bar */}
-          {searchOpen && (
-            <div className="py-3 border-t border-gray-100">
-              <div className="relative">
-                <Search
-                  size={18}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="Search for Agbada, Ankara, dresses, suits..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          )}
+          {searchOpen && <SearchBar onDone={() => setSearchOpen(false)} />}
         </div>
 
         {/* Mobile menu */}

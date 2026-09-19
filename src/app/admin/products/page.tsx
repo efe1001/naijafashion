@@ -2,16 +2,19 @@
 
 import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
-import { Plus, Search, Edit2, Trash2, ToggleLeft, ToggleRight, Star, Filter, X, Video as VideoIcon, Upload } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Star, Filter, X, Video as VideoIcon, Upload, Eye, EyeOff } from "lucide-react";
 import { Product } from "@/types";
 import { formatPrice } from "@/lib/utils";
 import { uploadFileToR2 } from "@/lib/upload";
 import { useProducts } from "@/lib/useProducts";
-
-const CATEGORIES = ["All", "nigerian-traditional", "women", "men", "kids", "accessories", "international"];
+import { useCategories } from "@/lib/useCategories";
 
 export default function AdminProductsPage() {
   const { products, refetch } = useProducts();
+  const { categories } = useCategories();
+  const CATEGORIES = ["All", ...categories.map((c) => c.slug)];
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
@@ -29,6 +32,7 @@ export default function AdminProductsPage() {
     name: "", price: "", originalPrice: "", category: "men", subcategory: "",
     description: "", sizes: "", colors: "", material: "", origin: "nigerian" as "nigerian" | "international",
     badge: "" as "" | "New" | "Sale" | "Hot" | "Limited",
+    stock: "0", status: "active" as "active" | "draft",
   });
 
   const filtered = useMemo(() => {
@@ -42,7 +46,7 @@ export default function AdminProductsPage() {
 
   const openAdd = () => {
     setEditProduct(null);
-    setForm({ name: "", price: "", originalPrice: "", category: "men", subcategory: "", description: "", sizes: "", colors: "", material: "", origin: "nigerian", badge: "" });
+    setForm({ name: "", price: "", originalPrice: "", category: "men", subcategory: "", description: "", sizes: "", colors: "", material: "", origin: "nigerian", badge: "", stock: "10", status: "active" });
     setFormImages([]);
     setFormVideos([]);
     setMediaError("");
@@ -56,6 +60,7 @@ export default function AdminProductsPage() {
       category: p.category, subcategory: p.subcategory, description: p.description,
       sizes: p.sizes.join(", "), colors: p.colors.join(", "), material: p.material || "",
       origin: p.origin, badge: p.badge || "",
+      stock: String(p.stock ?? 0), status: p.status ?? "active",
     });
     setFormImages(p.images);
     setFormVideos(p.videos ?? []);
@@ -114,6 +119,8 @@ export default function AdminProductsPage() {
       material: form.material,
       origin: form.origin,
       badge: form.badge || undefined,
+      stock: Math.max(0, Math.floor(Number(form.stock)) || 0),
+      status: form.status,
       ...(formImages.length > 0 ? { images: formImages } : {}),
       videos: formVideos,
     };
@@ -140,13 +147,35 @@ export default function AdminProductsPage() {
     }
   };
 
-  const toggleStock = async (p: Product) => {
+  const updateStock = async (p: Product, value: string) => {
+    const stock = Math.max(0, Math.floor(Number(value)) || 0);
+    if (stock === (p.stock ?? 0)) return;
     await fetch(`/api/products/${p.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ inStock: !p.inStock }),
+      body: JSON.stringify({ stock }),
     });
     refetch();
+  };
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const runBulk = async (action: "delete" | "publish" | "draft") => {
+    if (selected.length === 0) return;
+    if (action === "delete" && !confirm(`Delete ${selected.length} product(s)? This cannot be undone.`)) return;
+    setBulkBusy(true);
+    try {
+      await fetch("/api/products/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selected, action }),
+      });
+      setSelected([]);
+      await refetch();
+    } finally {
+      setBulkBusy(false);
+    }
   };
 
   const deleteProduct = async (id: string) => {
@@ -197,12 +226,30 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
+      {selected.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 bg-green-50 border border-green-200 rounded-2xl px-4 py-3 text-sm">
+          <span className="font-semibold text-green-800">{selected.length} selected</span>
+          <button disabled={bulkBusy} onClick={() => runBulk("publish")} className="px-3 py-1.5 bg-white border border-green-300 text-green-700 rounded-lg font-medium hover:bg-green-100 disabled:opacity-60">Publish</button>
+          <button disabled={bulkBusy} onClick={() => runBulk("draft")} className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 disabled:opacity-60">Move to draft</button>
+          <button disabled={bulkBusy} onClick={() => runBulk("delete")} className="px-3 py-1.5 bg-white border border-red-300 text-red-600 rounded-lg font-medium hover:bg-red-50 disabled:opacity-60">Delete</button>
+          <button onClick={() => setSelected([])} className="ml-auto text-gray-500 hover:text-gray-700">Clear</button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all"
+                    checked={filtered.length > 0 && filtered.every((p) => selected.includes(p.id))}
+                    onChange={(e) => setSelected(e.target.checked ? filtered.map((p) => p.id) : [])}
+                  />
+                </th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Category</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Price</th>
@@ -214,7 +261,10 @@ export default function AdminProductsPage() {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filtered.map((p) => (
-                <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={p.id} className={`hover:bg-gray-50 transition-colors ${p.status === "draft" ? "opacity-70" : ""}`}>
+                  <td className="px-4 py-3.5">
+                    <input type="checkbox" aria-label={`Select ${p.name}`} checked={selected.includes(p.id)} onChange={() => toggleSelected(p.id)} />
+                  </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className="relative w-12 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100">
@@ -248,25 +298,35 @@ export default function AdminProductsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3.5 hidden lg:table-cell">
-                    <div className="flex items-center gap-1">
-                      <Star size={12} className="fill-yellow-400 text-yellow-400" />
-                      <span className="font-medium text-gray-700">{p.rating}</span>
-                      <span className="text-gray-400 text-xs">({p.reviewCount})</span>
-                    </div>
+                    {p.reviewCount > 0 ? (
+                      <div className="flex items-center gap-1">
+                        <Star size={12} className="fill-yellow-400 text-yellow-400" />
+                        <span className="font-medium text-gray-700">{p.rating}</span>
+                        <span className="text-gray-400 text-xs">({p.reviewCount})</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">No reviews</span>
+                    )}
                   </td>
                   <td className="px-4 py-3.5 hidden lg:table-cell">
-                    <button onClick={() => toggleStock(p)} className="flex items-center gap-1.5 group">
-                      {p.inStock
-                        ? <ToggleRight size={20} className="text-green-500" />
-                        : <ToggleLeft size={20} className="text-gray-400" />}
-                      <span className={`text-xs font-medium ${p.inStock ? "text-green-600" : "text-gray-400"}`}>
-                        {p.inStock ? "In Stock" : "Out"}
-                      </span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <input
+                        key={`${p.id}-${p.stock}`}
+                        type="number"
+                        min={0}
+                        defaultValue={p.stock ?? 0}
+                        onBlur={(e) => updateStock(p, e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+                        className={`w-20 px-2 py-1.5 border rounded-lg text-sm text-center focus:outline-none focus:ring-2 focus:ring-green-500 ${(p.stock ?? 0) === 0 ? "border-red-300 bg-red-50" : (p.stock ?? 0) <= 5 ? "border-orange-300 bg-orange-50" : "border-gray-200"}`}
+                      />
+                      {(p.stock ?? 0) === 0 && <span className="text-xs font-semibold text-red-600">Sold out</span>}
+                      {(p.stock ?? 0) > 0 && (p.stock ?? 0) <= 5 && <span className="text-xs font-semibold text-orange-600">Low</span>}
+                    </div>
                   </td>
                   <td className="px-4 py-3.5">
-                    <span className={`text-xs px-2 py-1 rounded-full font-semibold ${p.origin === "nigerian" ? "bg-green-50 text-green-700" : "bg-blue-50 text-blue-700"}`}>
-                      {p.origin === "nigerian" ? "🇳🇬" : "🌍"} {p.origin}
+                    <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-semibold ${p.status === "draft" ? "bg-gray-100 text-gray-600" : "bg-green-50 text-green-700"}`}>
+                      {p.status === "draft" ? <EyeOff size={11} /> : <Eye size={11} />}
+                      {p.status === "draft" ? "Draft" : "Live"}
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
@@ -397,9 +457,12 @@ export default function AdminProductsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                   <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
-                    {["nigerian-traditional","women","men","kids","accessories","international"].map(c => (
-                      <option key={c} value={c}>{c.replace(/-/g," ")}</option>
+                    {categories.map(c => (
+                      <option key={c.slug} value={c.slug}>{c.name}</option>
                     ))}
+                    {!categories.some(c => c.slug === form.category) && (
+                      <option value={form.category}>{form.category.replace(/-/g," ")}</option>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -408,6 +471,27 @@ export default function AdminProductsPage() {
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                     <option value="nigerian">🇳🇬 Nigerian</option>
                     <option value="international">🌍 International</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Stock quantity</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.stock}
+                    onChange={e => setForm(p => ({ ...p, stock: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">0 = sold out. Orders reduce this automatically.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+                  <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value as "active" | "draft" }))}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                    <option value="active">Live on the store</option>
+                    <option value="draft">Draft (hidden)</option>
                   </select>
                 </div>
               </div>
