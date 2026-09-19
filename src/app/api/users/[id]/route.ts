@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSql } from "@/lib/db";
 import { hashPassword, requireAdmin } from "@/lib/auth";
 import { toSafeUser, DbUserRow } from "@/lib/user";
+import { logActivity } from "@/lib/activity";
 
 export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(request))) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
   const { id } = await ctx.params;
@@ -32,15 +34,20 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
   if (rows.length === 0) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
+  const changed = [body?.role && `role → ${body.role}`, body?.status && `status → ${body.status}`, body?.password && "password reset"].filter(Boolean).join(", ");
+  await logActivity(admin, "update", "user", id, `Edited user ${rows[0].email}${changed ? ": " + changed : ""}`);
   return NextResponse.json({ user: toSafeUser(rows[0]) });
 }
 
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  if (!(await requireAdmin(request))) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
   const { id } = await ctx.params;
   const sql = getSql();
+  const gone = (await sql`SELECT email FROM users WHERE id = ${id}`) as unknown as { email: string }[];
   await sql`DELETE FROM users WHERE id = ${id}`;
+  await logActivity(admin, "delete", "user", id, `Deleted user ${gone[0]?.email ?? id}`);
   return NextResponse.json({ ok: true });
 }

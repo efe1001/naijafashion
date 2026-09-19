@@ -10,6 +10,8 @@ export interface Product {
   sizes: string[];
   colors: string[];
   inStock: boolean;
+  stock?: number;
+  status?: "active" | "draft";
   rating: number;
   reviewCount: number;
   badge?: "New" | "Sale" | "Hot" | "Limited";

@@ -24,6 +24,8 @@ export interface DbOrderRow {
   payment_method: string | null;
   payment_ref: string | null;
   note: string | null;
+  discount: string | number | null;
+  coupon_code: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -44,6 +46,8 @@ export interface ApiOrder {
   paymentMethod: string | null;
   paymentRef: string | null;
   note: string | null;
+  discount: number;
+  couponCode: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,6 +79,8 @@ export function toApiOrder(row: DbOrderRow): ApiOrder {
     paymentMethod: row.payment_method,
     paymentRef: row.payment_ref,
     note: row.note,
+    discount: Number(row.discount ?? 0),
+    couponCode: row.coupon_code ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

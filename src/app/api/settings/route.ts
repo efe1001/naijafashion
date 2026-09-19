@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 
 interface DbSettingsRow {
   whatsapp_number: string;
@@ -19,11 +20,12 @@ function parseJsonObject(value: Record<string, unknown> | string): Record<string
 }
 
 function toApiSettings(row: DbSettingsRow) {
-  const { flashSale, ...storeInfo } = parseJsonObject(row.store_info);
+  const { flashSale, stateFees, ...storeInfo } = parseJsonObject(row.store_info);
   return {
     whatsappNumber: row.whatsapp_number,
     storeInfo,
     flashSale: flashSale ?? null,
+    stateFees: stateFees ?? {},
     notifications: parseJsonObject(row.notifications),
     payment: parseJsonObject(row.payment),
   };
@@ -39,7 +41,8 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  if (!(await requireAdmin(request))) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
   const body = await request.json().catch(() => null);
@@ -48,10 +51,11 @@ export async function PATCH(request: NextRequest) {
   const current = (await sql`SELECT * FROM settings WHERE id = 1`) as unknown as DbSettingsRow[];
   const currentStoreInfo = parseJsonObject(current[0]?.store_info ?? {});
   const mergedStoreInfo =
-    body?.storeInfo || body?.flashSale
+    body?.storeInfo || body?.flashSale || body?.stateFees
       ? {
           ...(body?.storeInfo ?? currentStoreInfo),
           flashSale: body?.flashSale ?? currentStoreInfo.flashSale,
+          stateFees: body?.stateFees ?? currentStoreInfo.stateFees,
         }
       : null;
 
@@ -65,5 +69,6 @@ export async function PATCH(request: NextRequest) {
     RETURNING *
   `) as unknown as DbSettingsRow[];
 
+  await logActivity(admin, "update", "settings", null, "Updated store settings");
   return NextResponse.json(toApiSettings(rows[0]));
 }

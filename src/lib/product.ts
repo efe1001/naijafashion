@@ -10,6 +10,8 @@ export interface DbProductRow {
   sizes: string[];
   colors: string[];
   in_stock: boolean;
+  stock: number;
+  status: string;
   rating: string | number;
   review_count: number;
   badge: string | null;
@@ -30,6 +32,8 @@ export interface ApiProduct {
   sizes: string[];
   colors: string[];
   inStock: boolean;
+  stock: number;
+  status: "active" | "draft";
   rating: number;
   reviewCount: number;
   badge?: "New" | "Sale" | "Hot" | "Limited";
@@ -64,6 +68,8 @@ export function toApiProduct(row: DbProductRow): ApiProduct {
     sizes: parseJsonArray(row.sizes),
     colors: parseJsonArray(row.colors),
     inStock: Boolean(row.in_stock),
+    stock: Number(row.stock ?? 0),
+    status: row.status === "draft" ? "draft" : "active",
     rating: Number(row.rating),
     reviewCount: row.review_count,
     badge: (row.badge as ApiProduct["badge"]) || undefined,

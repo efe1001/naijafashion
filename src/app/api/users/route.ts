@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSql } from "@/lib/db";
 import { hashPassword, requireAdmin } from "@/lib/auth";
 import { toSafeUser, DbUserRow } from "@/lib/user";
+import { logActivity } from "@/lib/activity";
 
 export async function GET(request: NextRequest) {
   if (!(await requireAdmin(request))) {
@@ -35,7 +36,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await requireAdmin(request))) {
+  const admin = await requireAdmin(request);
+  if (!admin) {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
@@ -64,5 +66,6 @@ export async function POST(request: NextRequest) {
     RETURNING id, name, email, password_hash, role, phone, address, state, status, created_at, last_login
   `) as unknown as DbUserRow[];
 
+  await logActivity(admin, "create", "user", id, `Created ${role} account for ${email}`);
   return NextResponse.json({ user: toSafeUser(rows[0]) }, { status: 201 });
 }

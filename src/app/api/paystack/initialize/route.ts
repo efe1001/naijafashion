@@ -9,14 +9,14 @@ interface InitializeData {
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  const { email, customerName, phone, address, state, items } = body || {};
+  const { email, customerName, phone, address, state, items, couponCode } = body || {};
 
   if (!email || !/\S+@\S+\.\S+/.test(email) || !customerName || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: "Missing required checkout details" }, { status: 400 });
   }
 
   try {
-    const priced = await priceCart(items as CartLine[]);
+    const priced = await priceCart(items as CartLine[], { state, couponCode });
     const orderId = generateOrderId();
     const reference = `${orderId}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
@@ -35,6 +35,8 @@ export async function POST(request: NextRequest) {
           address: address ?? "",
           state: state ?? "",
           subtotal: priced.subtotal,
+          discount: priced.discount,
+          couponCode: priced.couponCode,
           delivery: priced.delivery,
           items: priced.items,
         },
@@ -46,6 +48,7 @@ export async function POST(request: NextRequest) {
       reference: data.reference,
       orderId,
       subtotal: priced.subtotal,
+      discount: priced.discount,
       delivery: priced.delivery,
       total: priced.total,
     });
