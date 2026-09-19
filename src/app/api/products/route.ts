@@ -23,14 +23,14 @@ export async function POST(request: NextRequest) {
   const rows = (await sql`
     INSERT INTO products (
       id, name, price, original_price, images, category, subcategory, description,
-      sizes, colors, in_stock, rating, review_count, badge, material, origin, video_url
+      sizes, colors, in_stock, rating, review_count, badge, material, origin, videos
     ) VALUES (
       ${id}, ${body.name}, ${body.price}, ${body.originalPrice ?? null},
       ${JSON.stringify(body.images ?? ["https://images.unsplash.com/photo-1488161628813-04466f872be2?w=600&q=80"])},
       ${body.category ?? "men"}, ${body.subcategory ?? ""}, ${body.description ?? ""},
       ${JSON.stringify(body.sizes ?? [])}, ${JSON.stringify(body.colors ?? [])},
       ${body.inStock ?? true}, ${body.rating ?? 0}, ${body.reviewCount ?? 0},
-      ${body.badge || null}, ${body.material || null}, ${body.origin ?? "nigerian"}, ${body.videoUrl || null}
+      ${body.badge || null}, ${body.material || null}, ${body.origin ?? "nigerian"}, ${JSON.stringify(body.videos ?? [])}
     )
     RETURNING *
   `) as unknown as DbProductRow[];

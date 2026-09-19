@@ -15,7 +15,7 @@ export interface DbProductRow {
   badge: string | null;
   material: string | null;
   origin: string;
-  video_url: string | null;
+  videos: string[] | string;
 }
 
 export interface ApiProduct {
@@ -35,7 +35,7 @@ export interface ApiProduct {
   badge?: "New" | "Sale" | "Hot" | "Limited";
   material?: string;
   origin: "nigerian" | "international";
-  videoUrl?: string;
+  videos: string[];
 }
 
 function parseJsonArray(value: unknown): string[] {
@@ -69,6 +69,6 @@ export function toApiProduct(row: DbProductRow): ApiProduct {
     badge: (row.badge as ApiProduct["badge"]) || undefined,
     material: row.material || undefined,
     origin: row.origin === "international" ? "international" : "nigerian",
-    videoUrl: row.video_url || undefined,
+    videos: parseJsonArray(row.videos),
   };
 }

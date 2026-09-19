@@ -38,7 +38,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
       badge = CASE WHEN ${body?.badge !== undefined} THEN ${body?.badge || null} ELSE badge END,
       material = COALESCE(${body?.material ?? null}, material),
       origin = COALESCE(${body?.origin ?? null}, origin),
-      video_url = CASE WHEN ${body?.videoUrl !== undefined} THEN ${body?.videoUrl || null} ELSE video_url END
+      videos = COALESCE(${Array.isArray(body?.videos) ? JSON.stringify(body.videos) : null}, videos)
     WHERE id = ${id}
     RETURNING *
   `) as unknown as DbProductRow[];

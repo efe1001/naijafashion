@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS products (
   badge TEXT,
   material TEXT,
   origin TEXT NOT NULL DEFAULT 'nigerian',
-  video_url TEXT,
+  videos TEXT NOT NULL DEFAULT '[]',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

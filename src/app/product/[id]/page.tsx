@@ -20,7 +20,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const { addItem } = useCartStore();
   const { toggleWishlist, isWishlisted } = useWishlistStore();
   const { whatsappNumber } = useSettingsStore();
-  const productVideo = product?.videoUrl;
+  const productVideos = product?.videos ?? [];
 
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
@@ -86,7 +86,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
       selectedSize ? `Size: ${selectedSize}` : null,
       selectedColor ? `Color: ${selectedColor}` : null,
       `Image: ${product.images[0]}`,
-      productVideo ? `Video: ${productVideo}` : null,
+      ...productVideos.map((v, i) => `Video${productVideos.length > 1 ? ` ${i + 1}` : ""}: ${v}`),
       `Link: ${typeof window !== "undefined" ? window.location.href : ""}`,
     ].filter(Boolean);
     window.open(buildWhatsAppLink(whatsappNumber, lines.join("\n")), "_blank");
@@ -150,11 +150,11 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                 ))}
               </div>
             )}
-            {productVideo && (
-              <div className="relative aspect-video rounded-2xl overflow-hidden bg-black">
-                <video src={productVideo} controls className="w-full h-full" />
+            {productVideos.map((v) => (
+              <div key={v} className="relative aspect-video rounded-2xl overflow-hidden bg-black">
+                <video src={v} controls className="w-full h-full" />
               </div>
-            )}
+            ))}
           </div>
 
           {/* Details */}

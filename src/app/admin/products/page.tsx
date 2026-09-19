@@ -17,14 +17,9 @@ export default function AdminProductsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [videoProduct, setVideoProduct] = useState<Product | null>(null);
-  const [videoUrlInput, setVideoUrlInput] = useState("");
-  const [videoUploadError, setVideoUploadError] = useState("");
-  const [videoUploading, setVideoUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const videoFileRef = useRef<HTMLInputElement>(null);
   const [formImages, setFormImages] = useState<string[]>([]);
-  const [formVideoUrl, setFormVideoUrl] = useState("");
+  const [formVideos, setFormVideos] = useState<string[]>([]);
   const [mediaUploading, setMediaUploading] = useState(false);
   const [mediaError, setMediaError] = useState("");
   const formImageRef = useRef<HTMLInputElement>(null);
@@ -49,7 +44,7 @@ export default function AdminProductsPage() {
     setEditProduct(null);
     setForm({ name: "", price: "", originalPrice: "", category: "men", subcategory: "", description: "", sizes: "", colors: "", material: "", origin: "nigerian", badge: "" });
     setFormImages([]);
-    setFormVideoUrl("");
+    setFormVideos([]);
     setMediaError("");
     setShowModal(true);
   };
@@ -63,7 +58,7 @@ export default function AdminProductsPage() {
       origin: p.origin, badge: p.badge || "",
     });
     setFormImages(p.images);
-    setFormVideoUrl(p.videoUrl || "");
+    setFormVideos(p.videos ?? []);
     setMediaError("");
     setShowModal(true);
   };
@@ -87,16 +82,17 @@ export default function AdminProductsPage() {
     }
   };
 
-  const handleFormVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleFormVideoFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
     if (formVideoRef.current) formVideoRef.current.value = "";
-    if (!file) return;
-    if (!file.type.startsWith("video/")) { setMediaError("Please select a video file."); return; }
-    if (file.size > 100 * 1024 * 1024) { setMediaError("Video is too large — keep uploads under 100MB."); return; }
+    if (files.length === 0) return;
+    if (files.some(f => !f.type.startsWith("video/"))) { setMediaError("Please select video files only."); return; }
+    if (files.some(f => f.size > 100 * 1024 * 1024)) { setMediaError("Each video must be under 100MB."); return; }
     setMediaError("");
     setMediaUploading(true);
     try {
-      setFormVideoUrl(await uploadFileToR2(file, "products"));
+      const urls = await Promise.all(files.map(f => uploadFileToR2(f, "products")));
+      setFormVideos(prev => [...prev, ...urls]);
     } catch (err) {
       setMediaError(err instanceof Error ? err.message : "Upload failed. Please try again.");
     } finally {
@@ -119,7 +115,7 @@ export default function AdminProductsPage() {
       origin: form.origin,
       badge: form.badge || undefined,
       ...(formImages.length > 0 ? { images: formImages } : {}),
-      videoUrl: formVideoUrl || null,
+      videos: formVideos,
     };
 
     setSaving(true);
@@ -157,67 +153,6 @@ export default function AdminProductsPage() {
     await fetch(`/api/products/${id}`, { method: "DELETE" });
     setDeleteConfirm(null);
     refetch();
-  };
-
-  const openVideo = (p: Product) => {
-    setVideoProduct(p);
-    setVideoUrlInput(p.videoUrl || "");
-    setVideoUploadError("");
-  };
-
-  const closeVideoModal = () => {
-    setVideoProduct(null);
-    setVideoUrlInput("");
-    setVideoUploadError("");
-    if (videoFileRef.current) videoFileRef.current.value = "";
-  };
-
-  const saveVideoUrl = async (productId: string, videoUrl: string) => {
-    await fetch(`/api/products/${productId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ videoUrl: videoUrl || null }),
-    });
-    await refetch();
-  };
-
-  const handleVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !videoProduct) return;
-    if (!file.type.startsWith("video/")) {
-      setVideoUploadError("Please select a video file.");
-      return;
-    }
-    if (file.size > 100 * 1024 * 1024) {
-      setVideoUploadError("Video is too large — keep uploads under 100MB.");
-      return;
-    }
-    setVideoUploadError("");
-    setVideoUploading(true);
-    try {
-      const publicUrl = await uploadFileToR2(file, "products");
-      await saveVideoUrl(videoProduct.id, publicUrl);
-      setVideoProduct((prev) => (prev ? { ...prev, videoUrl: publicUrl } : prev));
-      setVideoUrlInput(publicUrl);
-    } catch (err) {
-      setVideoUploadError(err instanceof Error ? err.message : "Upload failed. Please try again.");
-    } finally {
-      setVideoUploading(false);
-      if (videoFileRef.current) videoFileRef.current.value = "";
-    }
-  };
-
-  const handleSaveVideoUrl = async () => {
-    if (!videoProduct || !videoUrlInput.trim()) return;
-    await saveVideoUrl(videoProduct.id, videoUrlInput.trim());
-    setVideoProduct((prev) => (prev ? { ...prev, videoUrl: videoUrlInput.trim() } : prev));
-  };
-
-  const handleRemoveVideo = async () => {
-    if (!videoProduct) return;
-    await saveVideoUrl(videoProduct.id, "");
-    setVideoProduct((prev) => (prev ? { ...prev, videoUrl: undefined } : prev));
-    setVideoUrlInput("");
   };
 
   return (
@@ -292,9 +227,9 @@ export default function AdminProductsPage() {
                           {p.badge && (
                             <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">{p.badge}</span>
                           )}
-                          {p.videoUrl && (
+                          {(p.videos?.length ?? 0) > 0 && (
                             <span className="flex items-center gap-1 text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">
-                              <VideoIcon size={10} /> Video
+                              <VideoIcon size={10} /> {p.videos?.length} Video{(p.videos?.length ?? 0) > 1 ? "s" : ""}
                             </span>
                           )}
                         </div>
@@ -342,13 +277,6 @@ export default function AdminProductsPage() {
                         title="Edit"
                       >
                         <Edit2 size={15} />
-                      </button>
-                      <button
-                        onClick={() => openVideo(p)}
-                        className={`p-2 rounded-lg transition-colors ${p.videoUrl ? "text-purple-600 hover:bg-purple-50" : "text-gray-400 hover:bg-gray-100"}`}
-                        title="Video"
-                      >
-                        <VideoIcon size={15} />
                       </button>
                       <button
                         onClick={() => setDeleteConfirm(p.id)}
@@ -413,34 +341,34 @@ export default function AdminProductsPage() {
                   </button>
                 </div>
                 <input ref={formImageRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageFiles} />
-                <p className="text-xs text-gray-400 mt-1">The thumbnail is shown in listings. Tap "Make thumbnail" on any image to change it. Up to 10MB each.</p>
+                <p className="text-xs text-gray-400 mt-1">The thumbnail is shown in listings. Tap &quot;Make thumbnail&quot; on any image to change it. Up to 10MB each.</p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Product Video</label>
-                {formVideoUrl && (
-                  <div className="relative rounded-xl overflow-hidden bg-black aspect-video mb-2">
-                    <video src={formVideoUrl} controls className="w-full h-full" />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Product Videos</label>
+                {formVideos.map((url, i) => (
+                  <div key={url} className="relative rounded-xl overflow-hidden bg-black aspect-video mb-2">
+                    <video src={url} controls className="w-full h-full" />
                     <button
                       type="button"
-                      onClick={() => setFormVideoUrl("")}
+                      onClick={() => setFormVideos(prev => prev.filter((_, idx) => idx !== i))}
                       className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-red-600"
                       title="Remove video"
                     >
                       <X size={14} />
                     </button>
                   </div>
-                )}
+                ))}
                 <button
                   type="button"
                   onClick={() => formVideoRef.current?.click()}
                   disabled={mediaUploading}
                   className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-green-400 hover:text-green-700 transition-colors disabled:opacity-60"
                 >
-                  <VideoIcon size={15} /> {formVideoUrl ? "Replace Video" : "Upload Video"}
+                  <VideoIcon size={15} /> {formVideos.length > 0 ? "Add More Videos" : "Upload Videos"}
                 </button>
-                <input ref={formVideoRef} type="file" accept="video/*" className="hidden" onChange={handleFormVideoFile} />
-                <p className="text-xs text-gray-400 mt-1">Optional. Keep clips under 100MB.</p>
+                <input ref={formVideoRef} type="file" accept="video/*" multiple className="hidden" onChange={handleFormVideoFiles} />
+                <p className="text-xs text-gray-400 mt-1">Optional. Select one or several. Keep each under 100MB.</p>
               </div>
               {mediaError && <p className="text-red-500 text-xs">{mediaError}</p>}
 
@@ -511,82 +439,6 @@ export default function AdminProductsPage() {
               </button>
               <button onClick={handleSave} disabled={saving || mediaUploading} className="flex-1 py-2.5 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 transition-colors text-sm disabled:opacity-60">
                 {saving ? "Saving..." : editProduct ? "Save Changes" : "Add Product"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Video modal */}
-      {videoProduct && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <div>
-                <h2 className="font-bold text-gray-900 text-lg">Product Video</h2>
-                <p className="text-xs text-gray-400 line-clamp-1">{videoProduct.name}</p>
-              </div>
-              <button onClick={closeVideoModal} className="p-2 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              {videoProduct.videoUrl && (
-                <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
-                  <video src={videoProduct.videoUrl} controls className="w-full h-full" />
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Upload a video file</label>
-                <button
-                  onClick={() => videoFileRef.current?.click()}
-                  disabled={videoUploading}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-green-400 hover:text-green-700 transition-colors disabled:opacity-60"
-                >
-                  {videoUploading ? (
-                    <><div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" /> Uploading...</>
-                  ) : (
-                    <><Upload size={15} /> Choose Video File</>
-                  )}
-                </button>
-                <input ref={videoFileRef} type="file" accept="video/*" className="hidden" onChange={handleVideoFile} disabled={videoUploading} />
-                {videoUploadError && <p className="text-red-500 text-xs mt-1">{videoUploadError}</p>}
-                <p className="text-xs text-gray-400 mt-1">Uploaded to Cloudflare storage — keep clips under 100MB.</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-px bg-gray-100" />
-                <span className="text-xs text-gray-400">OR</span>
-                <div className="flex-1 h-px bg-gray-100" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Paste a video URL</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={videoUrlInput}
-                    onChange={e => setVideoUrlInput(e.target.value)}
-                    placeholder="https://..."
-                    className="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                  <button onClick={handleSaveVideoUrl} className="px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition-colors">
-                    Use
-                  </button>
-                </div>
-              </div>
-
-              {videoProduct.videoUrl && (
-                <button
-                  onClick={handleRemoveVideo}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 text-red-500 hover:bg-red-50 rounded-xl transition-colors text-sm font-medium"
-                >
-                  <Trash2 size={15} /> Remove Video
-                </button>
-              )}
-            </div>
-            <div className="flex gap-3 p-5 border-t border-gray-100">
-              <button onClick={closeVideoModal} className="flex-1 py-2.5 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 transition-colors text-sm">
-                Done
               </button>
             </div>
           </div>

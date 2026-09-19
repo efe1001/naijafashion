@@ -15,7 +15,7 @@ export interface Product {
   badge?: "New" | "Sale" | "Hot" | "Limited";
   material?: string;
   origin: "nigerian" | "international";
-  videoUrl?: string;
+  videos?: string[];
 }
 
 export interface CartItem extends Product {
