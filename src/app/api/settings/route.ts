@@ -19,9 +19,11 @@ function parseJsonObject(value: Record<string, unknown> | string): Record<string
 }
 
 function toApiSettings(row: DbSettingsRow) {
+  const { flashSale, ...storeInfo } = parseJsonObject(row.store_info);
   return {
     whatsappNumber: row.whatsapp_number,
-    storeInfo: parseJsonObject(row.store_info),
+    storeInfo,
+    flashSale: flashSale ?? null,
     notifications: parseJsonObject(row.notifications),
     payment: parseJsonObject(row.payment),
   };
@@ -43,10 +45,20 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json().catch(() => null);
   const sql = getSql();
 
+  const current = (await sql`SELECT * FROM settings WHERE id = 1`) as unknown as DbSettingsRow[];
+  const currentStoreInfo = parseJsonObject(current[0]?.store_info ?? {});
+  const mergedStoreInfo =
+    body?.storeInfo || body?.flashSale
+      ? {
+          ...(body?.storeInfo ?? currentStoreInfo),
+          flashSale: body?.flashSale ?? currentStoreInfo.flashSale,
+        }
+      : null;
+
   const rows = (await sql`
     UPDATE settings SET
       whatsapp_number = COALESCE(${body?.whatsappNumber ?? null}, whatsapp_number),
-      store_info = COALESCE(${body?.storeInfo ? JSON.stringify(body.storeInfo) : null}, store_info),
+      store_info = COALESCE(${mergedStoreInfo ? JSON.stringify(mergedStoreInfo) : null}, store_info),
       notifications = COALESCE(${body?.notifications ? JSON.stringify(body.notifications) : null}, notifications),
       payment = COALESCE(${body?.payment ? JSON.stringify(body.payment) : null}, payment)
     WHERE id = 1

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Save, Store, Bell, Shield, Truck, CreditCard, CheckCircle2, MessageCircle } from "lucide-react";
+import { Save, Store, Bell, Shield, Truck, CreditCard, CheckCircle2, MessageCircle, Zap, ToggleLeft, ToggleRight } from "lucide-react";
 import { useSettingsStore } from "@/store/settingsStore";
 
 export default function AdminSettingsPage() {
@@ -10,6 +10,7 @@ export default function AdminSettingsPage() {
     storeInfo: savedStoreInfo,
     notifications: savedNotifications,
     payment: savedPayment,
+    flashSale: savedFlashSale,
     saveSettings,
   } = useSettingsStore();
 
@@ -19,17 +20,19 @@ export default function AdminSettingsPage() {
   const [store, setStore] = useState(savedStoreInfo);
   const [notifications, setNotifications] = useState(savedNotifications);
   const [payment, setPayment] = useState(savedPayment);
+  const [flashSale, setFlashSale] = useState(savedFlashSale);
 
   // Sync local drafts once settings finish loading from the server
   useEffect(() => { setWhatsappNumber(savedWhatsapp); }, [savedWhatsapp]);
   useEffect(() => { setStore(savedStoreInfo); }, [savedStoreInfo]);
   useEffect(() => { setNotifications(savedNotifications); }, [savedNotifications]);
   useEffect(() => { setPayment(savedPayment); }, [savedPayment]);
+  useEffect(() => { setFlashSale(savedFlashSale); }, [savedFlashSale]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveSettings({ whatsappNumber, storeInfo: store, notifications, payment });
+      await saveSettings({ whatsappNumber, storeInfo: store, notifications, payment, flashSale });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } finally {
@@ -61,6 +64,67 @@ export default function AdminSettingsPage() {
       )}
 
       <div className="grid lg:grid-cols-2 gap-6">
+        {/* Flash Sale Banner */}
+        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Zap size={18} className="text-red-500" />
+              <div>
+                <h2 className="font-bold text-gray-900">Flash Sale Banner</h2>
+                <p className="text-xs text-gray-400">Homepage countdown banner. Hidden until you turn it on.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFlashSale(p => ({ ...p, enabled: !p.enabled }))}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${flashSale.enabled ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
+            >
+              {flashSale.enabled ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+              {flashSale.enabled ? "ON — showing on homepage" : "OFF — hidden"}
+            </button>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {([
+              { label: "Badge text", key: "badge" },
+              { label: "Small heading (e.g. Up to)", key: "headline" },
+              { label: "Highlighted offer (e.g. 40% Off)", key: "highlight" },
+              { label: "Description line", key: "subtitle" },
+              { label: "Button text", key: "buttonText" },
+              { label: "Button link", key: "buttonLink" },
+            ] as const).map(({ label, key }) => (
+              <div key={key}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                <input
+                  type="text"
+                  value={flashSale[key]}
+                  onChange={e => setFlashSale(p => ({ ...p, [key]: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            ))}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Perks (comma separated)</label>
+              <input
+                type="text"
+                value={flashSale.perks.join(", ")}
+                onChange={e => setFlashSale(p => ({ ...p, perks: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }))}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sale ends at</label>
+              <input
+                type="datetime-local"
+                value={flashSale.endsAt}
+                onChange={e => setFlashSale(p => ({ ...p, endsAt: e.target.value }))}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <p className="text-xs text-gray-400 mt-1">Leave empty to count down to midnight tonight. The banner hides itself when the time runs out.</p>
+            </div>
+          </div>
+          <p className="text-xs text-gray-400">Remember to press Save Changes at the top.</p>
+        </div>
+
         {/* Store Info */}
         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-4">
           <div className="flex items-center gap-2 mb-2">

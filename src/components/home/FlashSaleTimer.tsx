@@ -4,16 +4,17 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Zap, Clock, Tag } from "lucide-react";
+import { useSettingsStore } from "@/store/settingsStore";
 
-function getTimeLeft() {
-  const now = new Date();
-  const end = new Date();
-  end.setHours(23, 59, 59, 999);
-  const diff = end.getTime() - now.getTime();
+function getTimeLeft(endsAt: string) {
+  const end = endsAt ? new Date(endsAt) : new Date();
+  if (!endsAt || Number.isNaN(end.getTime())) end.setHours(23, 59, 59, 999);
+  const diff = Math.max(0, end.getTime() - Date.now());
   return {
     h: Math.floor(diff / 3600000),
     m: Math.floor((diff % 3600000) / 60000),
     s: Math.floor((diff % 60000) / 1000),
+    over: diff === 0,
   };
 }
 
@@ -41,17 +42,19 @@ function FlipUnit({ value, label }: { value: number; label: string }) {
 }
 
 export default function FlashSaleTimer() {
-  const [time, setTime] = useState({ h: 0, m: 0, s: 0 });
+  const flashSale = useSettingsStore((s) => s.flashSale);
+  const loaded = useSettingsStore((s) => s.loaded);
+  const [time, setTime] = useState({ h: 0, m: 0, s: 0, over: false });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setTime(getTimeLeft());
-    const t = setInterval(() => setTime(getTimeLeft()), 1000);
+    setTime(getTimeLeft(flashSale.endsAt));
+    const t = setInterval(() => setTime(getTimeLeft(flashSale.endsAt)), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [flashSale.endsAt]);
 
-  if (!mounted) return null;
+  if (!mounted || !loaded || !flashSale.enabled || time.over) return null;
 
   return (
     <section className="relative py-14 overflow-hidden bg-linear-to-r from-gray-950 via-red-950 to-gray-950">
@@ -71,12 +74,12 @@ export default function FlashSaleTimer() {
           <motion.div className="text-center lg:text-left"
             initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
             <div className="inline-flex items-center gap-2 bg-red-500/20 border border-red-500/30 text-red-300 text-xs font-bold px-3 py-1.5 rounded-full mb-3 animate-pulse">
-              <Zap size={12} fill="currentColor" /> FLASH SALE — TODAY ONLY
+              <Zap size={12} fill="currentColor" /> {flashSale.badge}
             </div>
-            <h2 className="text-4xl sm:text-5xl font-extrabold text-white">Up to <span className="text-red-400">40% Off</span></h2>
-            <p className="text-gray-400 mt-2 text-lg">Men&apos;s Agbada, Senator Suits, George Wrappers & More</p>
+            <h2 className="text-4xl sm:text-5xl font-extrabold text-white">{flashSale.headline} <span className="text-red-400">{flashSale.highlight}</span></h2>
+            <p className="text-gray-400 mt-2 text-lg">{flashSale.subtitle}</p>
             <div className="flex flex-wrap items-center gap-3 mt-4 justify-center lg:justify-start">
-              {["Free Delivery", "Easy Returns", "Verified Items"].map(tag => (
+              {flashSale.perks.map(tag => (
                 <span key={tag} className="flex items-center gap-1 text-xs text-gray-400 bg-white/5 px-2.5 py-1 rounded-full border border-white/10">
                   <Tag size={10} /> {tag}
                 </span>
@@ -97,9 +100,9 @@ export default function FlashSaleTimer() {
 
           {/* CTA */}
           <motion.div initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.3 }}>
-            <Link href="/products?filter=sale"
+            <Link href={flashSale.buttonLink || "/products?filter=sale"}
               className="group inline-flex items-center gap-2 bg-red-500 hover:bg-red-400 text-white font-extrabold px-8 py-4 rounded-2xl transition-all shadow-2xl shadow-red-900/50 hover:shadow-red-500/30 hover:-translate-y-1 text-lg whitespace-nowrap animate-glow-pulse">
-              Shop Sale Now
+              {flashSale.buttonText}
               <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </Link>
           </motion.div>

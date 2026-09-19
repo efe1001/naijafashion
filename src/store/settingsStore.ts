@@ -28,7 +28,20 @@ export interface PaymentSettings {
   enablePhoneNumber: boolean;
 }
 
+export interface FlashSale {
+  enabled: boolean;
+  badge: string;
+  headline: string;
+  highlight: string;
+  subtitle: string;
+  perks: string[];
+  buttonText: string;
+  buttonLink: string;
+  endsAt: string;
+}
+
 interface SettingsPayload {
+  flashSale?: FlashSale;
   whatsappNumber?: string;
   storeInfo?: StoreInfo;
   notifications?: NotificationPrefs;
@@ -52,6 +65,18 @@ const DEFAULT_STORE_INFO: StoreInfo = {
   deliveryFee: "3500",
 };
 
+export const DEFAULT_FLASH_SALE: FlashSale = {
+  enabled: false,
+  badge: "FLASH SALE — TODAY ONLY",
+  headline: "Up to",
+  highlight: "40% Off",
+  subtitle: "Grab our best deals before they are gone",
+  perks: ["Free Delivery", "Easy Returns", "Verified Items"],
+  buttonText: "Shop Sale Now",
+  buttonLink: "/products?filter=sale",
+  endsAt: "",
+};
+
 const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
   newOrder: true, orderShipped: true, lowStock: true, newUser: false, paymentFailed: true,
 };
@@ -65,6 +90,7 @@ const DEFAULT_PAYMENT: PaymentSettings = {
 export const useSettingsStore = create<SettingsStore>()((set) => ({
   whatsappNumber: "+2348012345678",
   storeInfo: DEFAULT_STORE_INFO,
+  flashSale: DEFAULT_FLASH_SALE,
   notifications: DEFAULT_NOTIFICATIONS,
   payment: DEFAULT_PAYMENT,
   loaded: false,
@@ -76,6 +102,7 @@ export const useSettingsStore = create<SettingsStore>()((set) => ({
       set({
         whatsappNumber: data.whatsappNumber ?? "+2348012345678",
         storeInfo: { ...DEFAULT_STORE_INFO, ...data.storeInfo },
+        flashSale: { ...DEFAULT_FLASH_SALE, ...data.flashSale },
         notifications: { ...DEFAULT_NOTIFICATIONS, ...data.notifications },
         payment: { ...DEFAULT_PAYMENT, ...data.payment },
         loaded: true,
@@ -96,6 +123,7 @@ export const useSettingsStore = create<SettingsStore>()((set) => ({
     set({
       whatsappNumber: data.whatsappNumber,
       storeInfo: { ...DEFAULT_STORE_INFO, ...data.storeInfo },
+      flashSale: { ...DEFAULT_FLASH_SALE, ...data.flashSale },
       notifications: { ...DEFAULT_NOTIFICATIONS, ...data.notifications },
       payment: { ...DEFAULT_PAYMENT, ...data.payment },
     });
