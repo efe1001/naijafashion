@@ -23,6 +23,12 @@ export default function AdminProductsPage() {
   const [videoUploading, setVideoUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const videoFileRef = useRef<HTMLInputElement>(null);
+  const [formImages, setFormImages] = useState<string[]>([]);
+  const [formVideoUrl, setFormVideoUrl] = useState("");
+  const [mediaUploading, setMediaUploading] = useState(false);
+  const [mediaError, setMediaError] = useState("");
+  const formImageRef = useRef<HTMLInputElement>(null);
+  const formVideoRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     name: "", price: "", originalPrice: "", category: "men", subcategory: "",
@@ -42,6 +48,9 @@ export default function AdminProductsPage() {
   const openAdd = () => {
     setEditProduct(null);
     setForm({ name: "", price: "", originalPrice: "", category: "men", subcategory: "", description: "", sizes: "", colors: "", material: "", origin: "nigerian", badge: "" });
+    setFormImages([]);
+    setFormVideoUrl("");
+    setMediaError("");
     setShowModal(true);
   };
 
@@ -53,7 +62,46 @@ export default function AdminProductsPage() {
       sizes: p.sizes.join(", "), colors: p.colors.join(", "), material: p.material || "",
       origin: p.origin, badge: p.badge || "",
     });
+    setFormImages(p.images);
+    setFormVideoUrl(p.videoUrl || "");
+    setMediaError("");
     setShowModal(true);
+  };
+
+  const handleImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (formImageRef.current) formImageRef.current.value = "";
+    if (files.length === 0) return;
+    const bad = files.find(f => !f.type.startsWith("image/"));
+    if (bad) { setMediaError("Please select image files only."); return; }
+    if (files.some(f => f.size > 10 * 1024 * 1024)) { setMediaError("Each image must be under 10MB."); return; }
+    setMediaError("");
+    setMediaUploading(true);
+    try {
+      const urls = await Promise.all(files.map(f => uploadFileToR2(f, "products")));
+      setFormImages(prev => [...prev, ...urls]);
+    } catch (err) {
+      setMediaError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+    } finally {
+      setMediaUploading(false);
+    }
+  };
+
+  const handleFormVideoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (formVideoRef.current) formVideoRef.current.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("video/")) { setMediaError("Please select a video file."); return; }
+    if (file.size > 100 * 1024 * 1024) { setMediaError("Video is too large — keep uploads under 100MB."); return; }
+    setMediaError("");
+    setMediaUploading(true);
+    try {
+      setFormVideoUrl(await uploadFileToR2(file, "products"));
+    } catch (err) {
+      setMediaError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+    } finally {
+      setMediaUploading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -70,6 +118,8 @@ export default function AdminProductsPage() {
       material: form.material,
       origin: form.origin,
       badge: form.badge || undefined,
+      ...(formImages.length > 0 ? { images: formImages } : {}),
+      videoUrl: formVideoUrl || null,
     };
 
     setSaving(true);
@@ -325,6 +375,65 @@ export default function AdminProductsPage() {
               <button onClick={() => setShowModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
             </div>
             <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Product Images</label>
+                <div className="flex flex-wrap gap-2">
+                  {formImages.map((url, i) => (
+                    <div key={url} className="relative w-20 h-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={`Product image ${i + 1}`} className="w-full h-full object-cover" />
+                      {i === 0 && <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] text-center py-0.5">Main</span>}
+                      <button
+                        type="button"
+                        onClick={() => setFormImages(prev => prev.filter((_, idx) => idx !== i))}
+                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-red-600"
+                        title="Remove image"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => formImageRef.current?.click()}
+                    disabled={mediaUploading}
+                    className="w-20 h-24 flex flex-col items-center justify-center gap-1 border-2 border-dashed border-gray-300 rounded-lg text-xs font-medium text-gray-500 hover:border-green-400 hover:text-green-700 transition-colors disabled:opacity-60"
+                  >
+                    {mediaUploading ? <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" /> : <><Upload size={16} /> Add</>}
+                  </button>
+                </div>
+                <input ref={formImageRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageFiles} />
+                <p className="text-xs text-gray-400 mt-1">First image is the main photo. Up to 10MB each.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Product Video</label>
+                {formVideoUrl && (
+                  <div className="relative rounded-xl overflow-hidden bg-black aspect-video mb-2">
+                    <video src={formVideoUrl} controls className="w-full h-full" />
+                    <button
+                      type="button"
+                      onClick={() => setFormVideoUrl("")}
+                      className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-red-600"
+                      title="Remove video"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => formVideoRef.current?.click()}
+                  disabled={mediaUploading}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-600 hover:border-green-400 hover:text-green-700 transition-colors disabled:opacity-60"
+                >
+                  <VideoIcon size={15} /> {formVideoUrl ? "Replace Video" : "Upload Video"}
+                </button>
+                <input ref={formVideoRef} type="file" accept="video/*" className="hidden" onChange={handleFormVideoFile} />
+                <p className="text-xs text-gray-400 mt-1">Optional. Keep clips under 100MB.</p>
+              </div>
+              {mediaError && <p className="text-red-500 text-xs">{mediaError}</p>}
+
               {[
                 { label: "Product Name *", key: "name", type: "text", placeholder: "e.g. Royal Agbada Set" },
                 { label: "Price (₦) *", key: "price", type: "number", placeholder: "45000" },
@@ -390,7 +499,7 @@ export default function AdminProductsPage() {
               <button onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-colors text-sm">
                 Cancel
               </button>
-              <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 transition-colors text-sm disabled:opacity-60">
+              <button onClick={handleSave} disabled={saving || mediaUploading} className="flex-1 py-2.5 bg-green-700 text-white font-bold rounded-xl hover:bg-green-800 transition-colors text-sm disabled:opacity-60">
                 {saving ? "Saving..." : editProduct ? "Save Changes" : "Add Product"}
               </button>
             </div>

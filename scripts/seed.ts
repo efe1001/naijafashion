@@ -9,13 +9,6 @@ if (!process.env.CF_ACCOUNT_ID || !process.env.CF_D1_DATABASE_ID || !process.env
 
 const sql = getSql();
 
-const DEMO_ACCOUNTS = [
-  { name: "iFashion Admin", email: "admin@ifashion.ng", password: "Admin@2025", role: "admin" as const, phone: "+234 801 000 0001", address: "15 Bode Thomas Street, Surulere", state: "Lagos" },
-  { name: "Adaeze Okonkwo", email: "ada@ifashion.ng", password: "Ada@2025", role: "user" as const, phone: "+234 802 111 2222", address: "22 Allen Avenue, Ikeja", state: "Lagos" },
-  { name: "Emeka Nwosu", email: "emeka@ifashion.ng", password: "Emeka@2025", role: "user" as const, phone: "+234 803 222 3333", address: "5 Wuse Zone 6", state: "FCT - Abuja" },
-  { name: "Fatima Bello", email: "fatima@ifashion.ng", password: "Fatima@2025", role: "user" as const, phone: "+234 804 333 4444", address: "10 Bompai Road", state: "Kano" },
-];
-
 async function seedProducts() {
   let inserted = 0;
   for (const p of products) {
@@ -36,24 +29,29 @@ async function seedProducts() {
   console.log(`Products: inserted ${inserted}, skipped ${products.length - inserted} (already existed).`);
 }
 
-async function seedUsers() {
-  let inserted = 0;
-  for (const u of DEMO_ACCOUNTS) {
-    const rows = await sql`SELECT id FROM users WHERE email = ${u.email}`;
-    if (rows.length > 0) continue;
-    const passwordHash = await bcrypt.hash(u.password, 10);
-    await sql`
-      INSERT INTO users (id, name, email, password_hash, role, phone, address, state)
-      VALUES (${crypto.randomUUID()}, ${u.name}, ${u.email}, ${passwordHash}, ${u.role}, ${u.phone}, ${u.address}, ${u.state})
-    `;
-    inserted++;
+async function seedAdmin() {
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD;
+  if (!email || !password) {
+    console.log("Admin: ADMIN_EMAIL / ADMIN_PASSWORD not set, skipping.");
+    return;
   }
-  console.log(`Users: inserted ${inserted}, skipped ${DEMO_ACCOUNTS.length - inserted} (already existed).`);
+  const rows = await sql`SELECT id FROM users WHERE email = ${email}`;
+  if (rows.length > 0) {
+    console.log("Admin: already exists, skipped.");
+    return;
+  }
+  const passwordHash = await bcrypt.hash(password, 10);
+  await sql`
+    INSERT INTO users (id, name, email, password_hash, role)
+    VALUES (${crypto.randomUUID()}, ${process.env.ADMIN_NAME || "Admin"}, ${email}, ${passwordHash}, 'admin')
+  `;
+  console.log("Admin: created " + email);
 }
 
 async function main() {
   await seedProducts();
-  await seedUsers();
+  await seedAdmin();
   console.log("Seed complete.");
 }
 
