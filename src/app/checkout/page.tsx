@@ -15,7 +15,30 @@ declare global {
     MonnifySDK: {
       initialize: (config: Record<string, unknown>) => void;
     };
+    PaystackPop?: new () => {
+      resumeTransaction: (
+        accessCode: string,
+        callbacks: {
+          onSuccess?: (tx: { reference: string }) => void;
+          onCancel?: () => void;
+          onError?: (error: { message?: string }) => void;
+        }
+      ) => void;
+    };
   }
+}
+
+type Gateway = "paystack" | "monnify";
+
+function usePaystackScript() {
+  useEffect(() => {
+    if (document.getElementById("paystack-sdk")) return;
+    const script = document.createElement("script");
+    script.id = "paystack-sdk";
+    script.src = "https://js.paystack.co/v2/inline.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
 }
 
 type MonnifyPayMethod = "CARD" | "ACCOUNT_TRANSFER" | "USSD" | "PHONE_NUMBER";
@@ -49,7 +72,10 @@ export default function CheckoutPage() {
   const grandTotal = total + delivery;
 
   useMonnifyScript();
+  usePaystackScript();
 
+  const [gateway, setGateway] = useState<Gateway>("paystack");
+  const [payError, setPayError] = useState("");
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "",
     address: "", city: "", state: "",
@@ -90,6 +116,65 @@ export default function CheckoutPage() {
     setErrors({ ...errors, [e.target.name]: "" });
   };
 
+  const handlePaystack = async () => {
+    setPayError("");
+    if (!window.PaystackPop) {
+      setPayError("Payment window is still loading. Please try again in a moment.");
+      return;
+    }
+    setProcessing(true);
+    try {
+      const initRes = await fetch("/api/paystack/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          customerName: `${form.firstName} ${form.lastName}`,
+          phone: form.phone,
+          address: `${form.address}, ${form.city}`,
+          state: form.state,
+          items: items.map((item) => ({
+            id: item.id,
+            quantity: item.quantity,
+            size: item.selectedSize,
+            color: item.selectedColor,
+          })),
+        }),
+      });
+      const init = await initRes.json();
+      if (!initRes.ok) throw new Error(init.error || "Could not start payment");
+
+      new window.PaystackPop().resumeTransaction(init.accessCode, {
+        onSuccess: async (tx) => {
+          try {
+            const verifyRes = await fetch("/api/paystack/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reference: tx.reference }),
+            });
+            const verified = await verifyRes.json();
+            if (!verifyRes.ok) throw new Error(verified.error || "Could not confirm payment");
+            clearCart();
+            router.push(`/order-confirmation?orderId=${verified.order.id}&total=${verified.order.total}&name=${form.firstName}`);
+          } catch (err) {
+            setPayError(
+              `${err instanceof Error ? err.message : "Could not confirm payment"}. If you were charged, contact us with reference ${tx.reference}.`
+            );
+            setProcessing(false);
+          }
+        },
+        onCancel: () => setProcessing(false),
+        onError: (error) => {
+          setPayError(error?.message || "Payment failed. Please try again.");
+          setProcessing(false);
+        },
+      });
+    } catch (err) {
+      setPayError(err instanceof Error ? err.message : "Could not start payment");
+      setProcessing(false);
+    }
+  };
+
   const handlePayment = () => {
     const e = validate();
     if (Object.keys(e).length > 0) {
@@ -98,6 +183,7 @@ export default function CheckoutPage() {
       return;
     }
     if (items.length === 0) { router.push("/products"); return; }
+    if (gateway === "paystack") { handlePaystack(); return; }
     if (!window.MonnifySDK) {
       alert("Payment SDK is still loading. Please try again in a moment.");
       return;
@@ -243,6 +329,38 @@ export default function CheckoutPage() {
                 Payment Method
               </h2>
 
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {([
+                  { id: "paystack", label: "Paystack", sub: "Card · Transfer · USSD" },
+                  { id: "monnify", label: "Monnify", sub: "Card · Transfer · USSD" },
+                ] as const).map(({ id, label, sub }) => (
+                  <button key={id} onClick={() => setGateway(id)}
+                    className={`p-4 border-2 rounded-xl text-left transition-colors ${gateway === id ? "border-green-600 bg-green-50" : "border-gray-200 hover:border-gray-300"}`}>
+                    <p className={`text-sm font-bold ${gateway === id ? "text-green-700" : "text-gray-700"}`}>{label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{sub}</p>
+                  </button>
+                ))}
+              </div>
+
+              {gateway === "paystack" && (
+                <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 bg-[#0ba4db] rounded-lg flex items-center justify-center">
+                      <span className="text-white font-extrabold text-xs">P</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-800 text-sm">Paystack Checkout</p>
+                      <p className="text-xs text-gray-400">Secure · PCI DSS Compliant</p>
+                    </div>
+                    <Lock size={13} className="text-green-600 ml-auto" />
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Click &quot;Pay&quot; and the Paystack window opens, where you can pay by card, bank transfer or USSD. Your order is confirmed automatically once payment succeeds.
+                  </p>
+                </div>
+              )}
+
+              {gateway === "monnify" && (<>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                 {PAY_METHODS.map(({ id, icon: Icon, label }) => (
                   <button key={id} onClick={() => setPayMethod(id)}
@@ -346,6 +464,7 @@ export default function CheckoutPage() {
                   </div>
                 )}
               </div>
+              </>)}
             </div>
           </div>
 
@@ -385,23 +504,25 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {payError && <p className="text-red-500 text-sm bg-red-50 border border-red-100 rounded-xl px-3 py-2">{payError}</p>}
+
               <button
                 onClick={handlePayment}
                 disabled={processing}
-                className={`w-full py-4 rounded-xl font-bold text-white transition-all shadow-lg flex items-center justify-center gap-2 ${processing ? "bg-gray-400 cursor-not-allowed" : "bg-[#0055d4] hover:bg-[#0046b0] shadow-blue-200"}`}
+                className={`w-full py-4 rounded-xl font-bold text-white transition-all shadow-lg flex items-center justify-center gap-2 ${processing ? "bg-gray-400 cursor-not-allowed" : gateway === "paystack" ? "bg-[#0ba4db] hover:bg-[#0990bf] shadow-sky-200" : "bg-[#0055d4] hover:bg-[#0046b0] shadow-blue-200"}`}
               >
                 {processing ? (
                   <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Processing...</>
                 ) : (
-                  <><Lock size={16} />Pay {formatPrice(grandTotal)} with Monnify</>
+                  <><Lock size={16} />Pay {formatPrice(grandTotal)} with {gateway === "paystack" ? "Paystack" : "Monnify"}</>
                 )}
               </button>
 
               <div className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 bg-[#0055d4] rounded flex items-center justify-center">
-                  <span className="text-white font-extrabold text-[9px]">M</span>
+                <div className={`w-5 h-5 rounded flex items-center justify-center ${gateway === "paystack" ? "bg-[#0ba4db]" : "bg-[#0055d4]"}`}>
+                  <span className="text-white font-extrabold text-[9px]">{gateway === "paystack" ? "P" : "M"}</span>
                 </div>
-                <p className="text-xs text-gray-400">100% secure · Powered by Monnify · PCI DSS</p>
+                <p className="text-xs text-gray-400">100% secure · Powered by {gateway === "paystack" ? "Paystack" : "Monnify"} · PCI DSS</p>
                 <Lock size={10} className="text-gray-400" />
               </div>
             </div>
