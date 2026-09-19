@@ -382,7 +382,17 @@ export default function AdminProductsPage() {
                     <div key={url} className="relative w-20 h-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={url} alt={`Product image ${i + 1}`} className="w-full h-full object-cover" />
-                      {i === 0 && <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] text-center py-0.5">Main</span>}
+                      {i === 0 ? (
+                        <span className="absolute bottom-0 inset-x-0 bg-green-700 text-white text-[10px] text-center py-0.5 font-semibold">Thumbnail</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setFormImages(prev => [prev[i], ...prev.filter((_, idx) => idx !== i)])}
+                          className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[10px] text-center py-0.5 hover:bg-green-700"
+                        >
+                          Make thumbnail
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setFormImages(prev => prev.filter((_, idx) => idx !== i))}
@@ -403,7 +413,7 @@ export default function AdminProductsPage() {
                   </button>
                 </div>
                 <input ref={formImageRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageFiles} />
-                <p className="text-xs text-gray-400 mt-1">First image is the main photo. Up to 10MB each.</p>
+                <p className="text-xs text-gray-400 mt-1">The thumbnail is shown in listings. Tap "Make thumbnail" on any image to change it. Up to 10MB each.</p>
               </div>
 
               <div>
