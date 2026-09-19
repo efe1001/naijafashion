@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import {
-  ArrowRight, TruckIcon, ShieldCheck, RefreshCw, Headphones,
+  ArrowRight,
   Star, BadgeCheck, Flame, Sparkles, Crown, Zap, Heart,
 } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
@@ -15,13 +15,6 @@ import MarqueeStrip from "@/components/home/MarqueeStrip";
 import { categories } from "@/data/products";
 import { useProducts } from "@/lib/useProducts";
 import { useMemo } from "react";
-
-const features = [
-  { icon: TruckIcon, title: "Free Delivery", desc: "On orders above ₦50,000", color: "text-blue-500", bg: "bg-blue-50 group-hover:bg-blue-500" },
-  { icon: ShieldCheck, title: "Secure Payment", desc: "100% secured via Monnify", color: "text-green-500", bg: "bg-green-50 group-hover:bg-green-500" },
-  { icon: RefreshCw, title: "Easy Returns", desc: "7-day hassle-free returns", color: "text-purple-500", bg: "bg-purple-50 group-hover:bg-purple-500" },
-  { icon: Headphones, title: "24/7 Support", desc: "Dedicated customer care", color: "text-orange-500", bg: "bg-orange-50 group-hover:bg-orange-500" },
-];
 
 const testimonials = [
   { name: "Adaeze Okonkwo", location: "Lagos", avatar: "AO", avatarBg: "bg-green-600", rating: 5, verified: true, text: "I ordered a George wrapper set for my sister's wedding and it arrived the next day! The quality is amazing. iFashion is my go-to!", product: "George Wrapper Set" },
@@ -58,27 +51,6 @@ export default function HomePage() {
 
       <HeroSlider />
       <MarqueeStrip />
-
-      {/* Features */}
-      <section className="border-b border-gray-100 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-y lg:divide-y-0 divide-gray-100"
-            variants={stagger} initial="hidden" whileInView="show" viewport={{ once: true }}>
-            {features.map(({ icon: Icon, title, desc, color, bg }) => (
-              <motion.div key={title} variants={fadeUp}
-                className="group flex items-center gap-4 px-6 py-6 hover:bg-gray-50 transition-colors cursor-default">
-                <div className={`w-12 h-12 ${bg} transition-colors duration-300 rounded-2xl flex items-center justify-center shrink-0`}>
-                  <Icon size={22} className={`${color} group-hover:text-white transition-colors duration-300`} />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900 text-sm">{title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
 
       {/* Flash Sale */}
       <FlashSaleTimer />
